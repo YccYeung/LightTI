@@ -1,0 +1,10 @@
+.env
+CLAUDE.md
+
+bin/
+*.exe
+
+.DS_Store
+
+.vscode/
+.idea/
