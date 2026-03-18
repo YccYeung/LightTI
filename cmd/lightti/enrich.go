@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"net"
+	// "fmt"
+	// "os"
+
+	"github.com/YccYeung/LightTI/internal/enricher"
 
 	"github.com/spf13/cobra"
 )
@@ -21,12 +22,8 @@ var enrich = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// If IP flag is used
 		if ip != "" {
-			if net.ParseIP(ip) == nil {
-				fmt.Fprintf(os.Stderr, "invalid IP address: %s\n", ip)
-				os.Exit(1)
-			}
 			// Call internal function to enrich IP
-			// enrichIP(ip)
+			enricher.EnrichIP(ip)
 		} else if domain != "" {
 			// Call internal function to enrich domain	
 		} else if hash != "" {
