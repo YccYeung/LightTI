@@ -1,27 +1,21 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
 	"fmt"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command {
-	Use:   "TODO",
-	Short: "TODO",
-	Long: "TODO",
-	Run: func(cmd *cobra.Command, args []string) {
-		// TODO
-	}, 
+var rootCmd = &cobra.Command{
+	Use:   "lightti",
+	Short: "LightTI — lightweight threat intelligence enrichment",
+	Long:  "LightTI enriches IPs, domains, URLs, and file hashes across multiple threat intelligence sources.",
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "An error while executing")
+		fmt.Fprintf(os.Stderr, "An error while executing: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(enrich)
 }
