@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Root Command for LightTI
 var rootCmd = &cobra.Command{
 	Use:   "lightti",
 	Short: "LightTI — lightweight threat intelligence enrichment",
