@@ -12,6 +12,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+
+type EnrichmentResult struct {
+	Source		string
+	Result 		any
+	Err			error
+}
+
 // VTResult holds the subset of fields returned by the VirusTotal IP address API
 // that are relevant for threat intelligence analysis.
 type VTResult struct {
@@ -45,7 +52,7 @@ type VTResult struct {
 	} `json:"data"`
 }
 
-// sanitizeVTOutput parses a raw VirusTotal JSON response into a VTResult struct.
+// parseVTOutput parses a raw VirusTotal JSON response into a VTResult struct.
 // Returns an error if the JSON is malformed or cannot be decoded.
 func parseVTOutput(report string) (VTResult, error) {
 	var vtReport VTResult
@@ -58,71 +65,118 @@ func parseVTOutput(report string) (VTResult, error) {
 	return vtReport, nil
 }
 
+// Virus Total output format in Terminal
 func formatVTReport(report VTResult) string {
 	d := report.Data
 	a := d.Attributes
+	fmtStr := "  %-30s %s\n"
+	fmtDec := "  %-30s %d\n" 
 
 	output := "\n=== VirusTotal Report ===\n\n"
 
 	output += "General Information\n"
-	output += fmt.Sprintf("  %-30s %s\n", "IP Address:", d.ID)
-	output += fmt.Sprintf("  %-30s %s\n", "Network:", a.Network)
-	output += fmt.Sprintf("  %-30s %s\n", "Country:", a.Country)
-	output += fmt.Sprintf("  %-30s %s\n", "Continent:", a.Continent)
-	output += fmt.Sprintf("  %-30s %d\n", "ASN:", a.ASN)
-	output += fmt.Sprintf("  %-30s %s\n", "AS Owner:", a.AsOwner)
-	output += fmt.Sprintf("  %-30s %s\n", "Regional Internet Registry:", a.RegionalInternetRegistry)
-	output += fmt.Sprintf("  %-30s %d\n", "Reputation:", a.Reputation)
+	output += fmt.Sprintf(fmtStr, "IP Address:", d.ID)
+	output += fmt.Sprintf(fmtStr, "Network:", a.Network)
+	output += fmt.Sprintf(fmtStr, "Country:", a.Country)
+	output += fmt.Sprintf(fmtStr, "Continent:", a.Continent)
+	output += fmt.Sprintf(fmtDec, "ASN:", a.ASN)
+	output += fmt.Sprintf(fmtStr, "AS Owner:", a.AsOwner)
+	output += fmt.Sprintf(fmtStr, "Regional Internet Registry:", a.RegionalInternetRegistry)
+	output += fmt.Sprintf(fmtStr, "Reputation:", a.Reputation)
 
 	if len(a.Tags) > 0 {
-		output += fmt.Sprintf("  %-30s %s\n", "Tags:", strings.Join(a.Tags, ", "))
+		output += fmt.Sprintf(fmtStr, "Tags:", strings.Join(a.Tags, ", "))
 	}
 
 	output += "\nLast Analysis Stats\n"
-	output += fmt.Sprintf("  %-30s %d\n", "Malicious:", a.LastAnalysisStats.Malicious)
-	output += fmt.Sprintf("  %-30s %d\n", "Suspicious:", a.LastAnalysisStats.Suspicious)
-	output += fmt.Sprintf("  %-30s %d\n", "Harmless:", a.LastAnalysisStats.Harmless)
-	output += fmt.Sprintf("  %-30s %d\n", "Undetected:", a.LastAnalysisStats.Undetected)
-	output += fmt.Sprintf("  %-30s %d\n", "Timeout:", a.LastAnalysisStats.Timeout)
+	output += fmt.Sprintf(fmtDec, "Malicious:", a.LastAnalysisStats.Malicious)
+	output += fmt.Sprintf(fmtDec, "Suspicious:", a.LastAnalysisStats.Suspicious)
+	output += fmt.Sprintf(fmtDec, "Harmless:", a.LastAnalysisStats.Harmless)
+	output += fmt.Sprintf(fmtDec, "Undetected:", a.LastAnalysisStats.Undetected)
+	output += fmt.Sprintf(fmtDec, "Timeout:", a.LastAnalysisStats.Timeout)
 
 	output += "\nTotal Votes\n"
-	output += fmt.Sprintf("  %-30s %d\n", "Malicious:", a.TotalVotes.Malicious)
-	output += fmt.Sprintf("  %-30s %d\n", "Harmless:", a.TotalVotes.Harmless)
+	output += fmt.Sprintf(fmtDec, "Malicious:", a.TotalVotes.Malicious)
+	output += fmt.Sprintf(fmtDec, "Harmless:", a.TotalVotes.Harmless)
 
 	return output
 }
 
-// EnrichIP looks up threat intelligence for the given IP address across
-// configured sources and prints a structured summary to stdout.
-func EnrichIP(ip string) {
-	godotenv.Load()
-	
-	vtApiKey := os.Getenv("VT_API_KEY")
-
+func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 	if net.ParseIP(ip) == nil {
-		fmt.Fprintf(os.Stderr, "invalid IP address: %s\n", ip)
+		ch <- EnrichmentResult{
+			Source: "VirusTotal",  
+			Err: fmt.Errorf("invalid IP address: %s", ip),
+		}
 		return
 	}
-
+	// Send http GET request to retrieve Virus Total IP report 
 	vtUrl := "https://www.virustotal.com/api/v3/ip_addresses/" + ip
 
-	vtReq, _ := http.NewRequest("GET", vtUrl, nil)
+	vtReq, err := http.NewRequest("GET", vtUrl, nil)
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "VirusTotal",  
+			Err: err,
+		}
+		return
+	}
 	vtReq.Header.Add("accept", "application/json")
-	vtReq.Header.Add("x-apikey", vtApiKey)
+	vtReq.Header.Add("x-apikey", key)
 	vtRes, err := http.DefaultClient.Do(vtReq)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "request failed: %v\n", err)
+		ch <- EnrichmentResult{
+			Source: "VirusTotal",  
+			Err: err,
+		}
 		return
 	}
 
 	defer vtRes.Body.Close()
-	vtBody, _ := io.ReadAll(vtRes.Body)
-
-	vtReport, err := parseVTOutput(string(vtBody))
+	vtBody, err := io.ReadAll(vtRes.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse VT report: %v\n", err)
+		ch <- EnrichmentResult{
+			Source: "VirusTotal",  
+			Err: err,
+		}
 		return
 	}
 
-	fmt.Printf(formatVTReport(vtReport))
+	vtReport, err := parseVTOutput(string(vtBody))
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "VirusTotal",  
+			Err: err,
+		}
+		return
+	}
+	// TODO comment
+	ch <- EnrichmentResult{
+		Source: "VirusTotal", 
+		Result: vtReport, 
+		Err: nil,
+	} 
+	return
+}
+
+// TODO comment
+func EnrichIP(ip string) {
+	godotenv.Load()
+	vtApiKey := os.Getenv("VT_API_KEY")
+
+	ch := make(chan EnrichmentResult, 1)
+
+	go fetchVT(ip, vtApiKey, ch)
+
+	result := <- ch
+	if result.Err != nil {
+		fmt.Println("error from", result.Source, result.Err)
+		return
+	}
+
+	// switch r := result.Result.(type) {
+	// case condition:
+		
+	// }
+	
 }
