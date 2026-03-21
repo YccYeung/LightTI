@@ -12,9 +12,17 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// TODO comment
+// Formatting String constants used for report output formatting
+const (
+	fmtStr = "  %-30s %s\n"
+	fmtDec = "  %-30s %d\n"
+)
+
+// Unified Struct to store report from different api calls
 type EnrichmentResult struct {
+	// Name of report
 	Source		string
+	// Content of report
 	Result 		any
 	Err			error
 }
@@ -52,6 +60,8 @@ type VTResult struct {
 	} `json:"data"`
 }
 
+// AbuseIpResult holds the subset of fields returned by the AbuseIPDB IP address API
+// that are relevant for threat intelligence analysis.
 type AbuseIpResult struct {
 	Data struct {
 		IPAddress            string    `json:"ipAddress"`
@@ -60,7 +70,6 @@ type AbuseIpResult struct {
 		IsWhitelisted        bool      `json:"isWhitelisted"`
 		AbuseConfidenceScore int       `json:"abuseConfidenceScore"`
 		CountryCode          string    `json:"countryCode"`
-		CountryName          string    `json:"countryName"`
 		UsageType            string    `json:"usageType"`
 		Isp                  string    `json:"isp"`
 		Domain               string    `json:"domain"`
@@ -68,19 +77,10 @@ type AbuseIpResult struct {
 		IsTor                bool      `json:"isTor"`
 		TotalReports         int       `json:"totalReports"`
 		NumDistinctUsers     int       `json:"numDistinctUsers"`
-		// LastReportedAt       time.Time `json:"lastReportedAt"`
-		Reports              []struct {
-			// ReportedAt          time.Time `json:"reportedAt"`
-			Comment             string    `json:"comment"`
-			Categories          []int     `json:"categories"`
-			ReporterID          int       `json:"reporterId"`
-			ReporterCountryCode string    `json:"reporterCountryCode"`
-			ReporterCountryName string    `json:"reporterCountryName"`
-		} `json:"reports"`
 	} `json:"data"`
 }
 
-// TODO Comment
+// Parse VT api call response body and store it in JSON format
 func parseVTOutput(report string) (VTResult, error) {
 	var vtReport VTResult
 	
@@ -92,6 +92,7 @@ func parseVTOutput(report string) (VTResult, error) {
 	return vtReport, nil
 }
 
+// Parse AbuseIPD api call response body and store it in JSON format
 func parseAbuseIpOutput(report string) (AbuseIpResult, error) {
 	var AbuseIpReport AbuseIpResult
 	
@@ -107,8 +108,6 @@ func parseAbuseIpOutput(report string) (AbuseIpResult, error) {
 func formatVTReport(report VTResult) string {
 	d := report.Data
 	a := d.Attributes
-	fmtStr := "  %-30s %s\n"
-	fmtDec := "  %-30s %d\n" 
 
 	output := "\n=== VirusTotal Report ===\n\n"
 
@@ -120,7 +119,7 @@ func formatVTReport(report VTResult) string {
 	output += fmt.Sprintf(fmtDec, "ASN:", a.ASN)
 	output += fmt.Sprintf(fmtStr, "AS Owner:", a.AsOwner)
 	output += fmt.Sprintf(fmtStr, "Regional Internet Registry:", a.RegionalInternetRegistry)
-	output += fmt.Sprintf(fmtStr, "Reputation:", a.Reputation)
+	output += fmt.Sprintf(fmtDec, "Reputation:", a.Reputation)
 
 	if len(a.Tags) > 0 {
 		output += fmt.Sprintf(fmtStr, "Tags:", strings.Join(a.Tags, ", "))
@@ -140,15 +139,39 @@ func formatVTReport(report VTResult) string {
 	return output
 }
 
-
+// AbuseIPDB output format in Terminal
 func formatAbuseIpOutput(report AbuseIpResult) string {
-	// TODO
+	d := report.Data
+	output := "\n=== AbuseIPDB Report ===\n\n"
+
+	output += "General Information\n"
+	output += fmt.Sprintf(fmtStr, "IP Address:", d.IPAddress)
+	output += fmt.Sprintf(fmtDec, "IP Version:", d.IPVersion)
+
+	if d.IsPublic {
+		output += fmt.Sprintf(fmtStr, "IP Type:", "Public")	
+	} else {
+		output += fmt.Sprintf(fmtStr, "IP Type:", "Private")		
+	}
+
+	output += fmt.Sprintf(fmtStr, "Country Code:", d.CountryCode)
+	output += fmt.Sprintf(fmtStr, "ISP:", d.Isp)
+	output += fmt.Sprintf(fmtStr, "Domain:", d.Domain)
+	output += fmt.Sprintf(fmtStr, "Usage Type:", d.UsageType)
+
+	output += "\nRisk Assessment\n"
+	output += fmt.Sprintf(fmtDec, "Abuse Confidence Score:", d.AbuseConfidenceScore)
+	output += fmt.Sprintf(fmtDec, "Total Reports:", d.TotalReports)
+	output += fmt.Sprintf(fmtDec, "Distinct Users Reporting:", d.NumDistinctUsers)
+	output += fmt.Sprintf(fmtStr, "Is Tor:", fmt.Sprintf("%v", d.IsTor))
+	output += fmt.Sprintf(fmtStr, "Is Whitelisted:", fmt.Sprintf("%v", d.IsWhitelisted))
+
+	return output
 }
 
-
-// TODO comment
+// fetchVT calls the VirusTotal IP address API and sends the parsed result to ch.
+// Runs as a goroutine. All error paths send to ch before returning.
 func fetchVT(ip string, key string, ch chan EnrichmentResult) {
-	// Send http GET request to retrieve Virus Total IP report 
 	vtUrl := "https://www.virustotal.com/api/v3/ip_addresses/" + ip
 
 	vtReq, err := http.NewRequest("GET", vtUrl, nil)
@@ -188,16 +211,16 @@ func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 		}
 		return
 	}
-	// TODO comment
 	ch <- EnrichmentResult{
-		Source: "VirusTotal", 
-		Result: vtReport, 
+		Source: "VirusTotal",
+		Result: vtReport,
 		Err: nil,
-	} 
+	}
 	return
 }
 
-// TODO comment
+// fetchAbuseIpDb calls the AbuseIPDB check API and sends the parsed result to ch.
+// Runs as a goroutine. All error paths send to ch before returning.
 func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 	abuseIpUrl := "https://api.abuseipdb.com/api/v2/check"
 
@@ -236,36 +259,53 @@ func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 		return
 	}	
 
-	fmt.Println(parseAbuseIpOutput(string(abuseIpBody)))
-
-	// TODO: Send result to channel
-	
+	abuseIpReport, err := parseAbuseIpOutput(string(abuseIpBody))
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "AbuseIPDB",  
+			Err: err,
+		}
+		return
+	}
+	ch <- EnrichmentResult{
+		Source: "AbuseIPDB",
+		Result: abuseIpReport,
+		Err: nil,
+	}
+	return
 }
 
-// TODO comment
+// EnrichIP concurrently queries VirusTotal and AbuseIPDB for the given IP
+// and prints a formatted report for each source to stdout.
 func EnrichIP(ip string) {
 	godotenv.Load()
 
 	if net.ParseIP(ip) == nil {
-		fmt.Println("Invalid IP address: %s", ip)
+		fmt.Printf("Invalid IP address: %s\n", ip)
 		return
 	}
 		
 	vtApiKey := os.Getenv("VT_API_KEY")
 
-	ch := make(chan EnrichmentResult, 2)
+	// Buffer size matches number of goroutines so neither blocks on send
+	chNum := 2
+	ch := make(chan EnrichmentResult, chNum)
 
 	go fetchVT(ip, vtApiKey, ch)
 	go fetchAbuseIpDb(ip, vtApiKey, ch)
 
-	result := <- ch
-	if result.Err != nil {
-		fmt.Println("Error from", result.Source, result.Err)
-		return
+	for i := 0; i < chNum; i++ {
+		result := <- ch
+		if result.Err != nil {
+			fmt.Println("Error from", result.Source, result.Err)
+			return
+		}
+		// Route result to the correct formatter based on its concrete type
+		switch r := result.Result.(type) {
+		case VTResult:
+			fmt.Println(formatVTReport(r))
+		case AbuseIpResult:
+			fmt.Println(formatAbuseIpOutput(r))
+		}
 	}
-
-	// switch r := result.Result.(type) {
-	// case condition:
-		
-	// }
 }
