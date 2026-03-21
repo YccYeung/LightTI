@@ -237,7 +237,7 @@ func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 	q.Add("ipAddress", ip)
 	q.Add("maxAgeInDays", "90")
 	abuseIpReq.Header.Add("Accept", "application/json")
-	abuseIpReq.Header.Add("Key", os.Getenv("ABUSE_IP_DB_API_KEY"))	
+	abuseIpReq.Header.Add("Key", key)	
 	abuseIpReq.URL.RawQuery = q.Encode()
 
 	abuseIpRes, err := http.DefaultClient.Do(abuseIpReq)
@@ -286,13 +286,14 @@ func EnrichIP(ip string) {
 	}
 		
 	vtApiKey := os.Getenv("VT_API_KEY")
+	abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 
 	// Buffer size matches number of goroutines so neither blocks on send
 	chNum := 2
 	ch := make(chan EnrichmentResult, chNum)
 
 	go fetchVT(ip, vtApiKey, ch)
-	go fetchAbuseIpDb(ip, vtApiKey, ch)
+	go fetchAbuseIpDb(ip, abuseIpApiKey, ch)
 
 	for i := 0; i < chNum; i++ {
 		result := <- ch
