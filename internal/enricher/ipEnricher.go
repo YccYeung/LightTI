@@ -37,19 +37,17 @@ func EnrichIP(ip string) []EnrichmentResult {
 	abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 
 	// Buffer size matches number of goroutines so neither blocks on send
-	chNum := 2
+	chNum := 3
 	ch := make(chan EnrichmentResult, chNum)
 
 	go fetchVT(ip, vtApiKey, ch)
 	go fetchAbuseIpDb(ip, abuseIpApiKey, ch)
+	go fetchIpToLocation(ip, ch)
 
 	enrichmentList := []EnrichmentResult{}
 
 	for i := 0; i < chNum; i++ {
 		result := <- ch
-		if result.Err != nil {
-			fmt.Println("Error from", result.Source, result.Err)
-		}
 		enrichmentList = append(enrichmentList, result)
 	}
 	

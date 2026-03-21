@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	// "os"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 
@@ -25,11 +24,17 @@ var enrich = &cobra.Command{
 			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB
 			enrichmentList := enricher.EnrichIP(ip)
 			for _, result := range enrichmentList {
+				if result.Err != nil {
+					fmt.Printf("Error from %s: %v\n", result.Source, result.Err)
+					continue
+				}
 				switch r := result.Result.(type) {
-				case enricher.VTResult:
-					fmt.Println(enricher.FormatVTReport(r))
-				case enricher.AbuseIpResult:
-					fmt.Println(enricher.FormatAbuseIpOutput(r))
+					case enricher.VTResult:
+						fmt.Println(enricher.FormatVTReport(r))
+					case enricher.AbuseIpResult:
+						fmt.Println(enricher.FormatAbuseIpOutput(r))
+					case enricher.IpToLocationResult:
+						fmt.Println(enricher.FormatIpToLocationOutput(r))
 				}
 			}
 		} else if domain != "" {
