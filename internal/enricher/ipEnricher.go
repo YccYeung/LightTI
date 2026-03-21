@@ -81,7 +81,7 @@ type AbuseIpResult struct {
 }
 
 // Parse VT api call response body and store it in JSON format
-func parseVTOutput(report string) (VTResult, error) {
+func ParseVTOutput(report string) (VTResult, error) {
 	var vtReport VTResult
 	
 	err := json.Unmarshal([]byte(report), &vtReport)
@@ -93,7 +93,7 @@ func parseVTOutput(report string) (VTResult, error) {
 }
 
 // Parse AbuseIPD api call response body and store it in JSON format
-func parseAbuseIpOutput(report string) (AbuseIpResult, error) {
+func ParseAbuseIpOutput(report string) (AbuseIpResult, error) {
 	var AbuseIpReport AbuseIpResult
 	
 	err := json.Unmarshal([]byte(report), &AbuseIpReport)
@@ -105,7 +105,7 @@ func parseAbuseIpOutput(report string) (AbuseIpResult, error) {
 }
 
 // Virus Total output format in Terminal
-func formatVTReport(report VTResult) string {
+func FormatVTReport(report VTResult) string {
 	d := report.Data
 	a := d.Attributes
 
@@ -140,7 +140,7 @@ func formatVTReport(report VTResult) string {
 }
 
 // AbuseIPDB output format in Terminal
-func formatAbuseIpOutput(report AbuseIpResult) string {
+func FormatAbuseIpOutput(report AbuseIpResult) string {
 	d := report.Data
 	output := "\n=== AbuseIPDB Report ===\n\n"
 
@@ -169,9 +169,9 @@ func formatAbuseIpOutput(report AbuseIpResult) string {
 	return output
 }
 
-// fetchVT calls the VirusTotal IP address API and sends the parsed result to ch.
+// FetchVT calls the VirusTotal IP address API and sends the parsed result to ch.
 // Runs as a goroutine. All error paths send to ch before returning.
-func fetchVT(ip string, key string, ch chan EnrichmentResult) {
+func FetchVT(ip string, key string, ch chan EnrichmentResult) {
 	vtUrl := "https://www.virustotal.com/api/v3/ip_addresses/" + ip
 
 	vtReq, err := http.NewRequest("GET", vtUrl, nil)
@@ -203,7 +203,7 @@ func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 		return
 	}
 
-	vtReport, err := parseVTOutput(string(vtBody))
+	vtReport, err := ParseVTOutput(string(vtBody))
 	if err != nil {
 		ch <- EnrichmentResult{
 			Source: "VirusTotal",  
@@ -216,12 +216,11 @@ func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 		Result: vtReport,
 		Err: nil,
 	}
-	return
 }
 
-// fetchAbuseIpDb calls the AbuseIPDB check API and sends the parsed result to ch.
+// FetchAbuseIpDb calls the AbuseIPDB check API and sends the parsed result to ch.
 // Runs as a goroutine. All error paths send to ch before returning.
-func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
+func FetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 	abuseIpUrl := "https://api.abuseipdb.com/api/v2/check"
 
 	abuseIpReq, err := http.NewRequest("GET", abuseIpUrl, nil)
@@ -259,7 +258,7 @@ func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 		return
 	}	
 
-	abuseIpReport, err := parseAbuseIpOutput(string(abuseIpBody))
+	abuseIpReport, err := ParseAbuseIpOutput(string(abuseIpBody))
 	if err != nil {
 		ch <- EnrichmentResult{
 			Source: "AbuseIPDB",  
@@ -272,17 +271,16 @@ func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 		Result: abuseIpReport,
 		Err: nil,
 	}
-	return
 }
 
 // EnrichIP concurrently queries VirusTotal and AbuseIPDB for the given IP
 // and prints a formatted report for each source to stdout.
-func EnrichIP(ip string) {
+func EnrichIP(ip string) []EnrichmentResult {
 	godotenv.Load()
 
 	if net.ParseIP(ip) == nil {
 		fmt.Printf("Invalid IP address: %s\n", ip)
-		return
+		return []EnrichmentResult{}
 	}
 		
 	vtApiKey := os.Getenv("VT_API_KEY")
@@ -292,21 +290,18 @@ func EnrichIP(ip string) {
 	chNum := 2
 	ch := make(chan EnrichmentResult, chNum)
 
-	go fetchVT(ip, vtApiKey, ch)
-	go fetchAbuseIpDb(ip, abuseIpApiKey, ch)
+	go FetchVT(ip, vtApiKey, ch)
+	go FetchAbuseIpDb(ip, abuseIpApiKey, ch)
+
+	enrichmentList := []EnrichmentResult{}
 
 	for i := 0; i < chNum; i++ {
 		result := <- ch
 		if result.Err != nil {
 			fmt.Println("Error from", result.Source, result.Err)
-			return
 		}
-		// Route result to the correct formatter based on its concrete type
-		switch r := result.Result.(type) {
-		case VTResult:
-			fmt.Println(formatVTReport(r))
-		case AbuseIpResult:
-			fmt.Println(formatAbuseIpOutput(r))
-		}
+		enrichmentList = append(enrichmentList, result)
 	}
+	
+	return enrichmentList
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	// "os"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
@@ -23,7 +23,15 @@ var enrich = &cobra.Command{
 		// If IP flag is used
 		if ip != "" {
 			// Call internal function to enrich IP
-			enricher.EnrichIP(ip)
+			enrichmentList := enricher.EnrichIP(ip)
+			for _, result := range enrichmentList {
+				switch r := result.Result.(type) {
+				case enricher.VTResult:
+					fmt.Println(enricher.FormatVTReport(r))
+				case enricher.AbuseIpResult:
+					fmt.Println(enricher.FormatAbuseIpOutput(r))
+				}
+			}
 		} else if domain != "" {
 			// Call internal function to enrich domain	
 		} else if hash != "" {
