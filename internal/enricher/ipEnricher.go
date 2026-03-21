@@ -12,7 +12,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
+// TODO comment
 type EnrichmentResult struct {
 	Source		string
 	Result 		any
@@ -52,8 +52,35 @@ type VTResult struct {
 	} `json:"data"`
 }
 
-// parseVTOutput parses a raw VirusTotal JSON response into a VTResult struct.
-// Returns an error if the JSON is malformed or cannot be decoded.
+type AbuseIpResult struct {
+	Data struct {
+		IPAddress            string    `json:"ipAddress"`
+		IsPublic             bool      `json:"isPublic"`
+		IPVersion            int       `json:"ipVersion"`
+		IsWhitelisted        bool      `json:"isWhitelisted"`
+		AbuseConfidenceScore int       `json:"abuseConfidenceScore"`
+		CountryCode          string    `json:"countryCode"`
+		CountryName          string    `json:"countryName"`
+		UsageType            string    `json:"usageType"`
+		Isp                  string    `json:"isp"`
+		Domain               string    `json:"domain"`
+		Hostnames            []any     `json:"hostnames"`
+		IsTor                bool      `json:"isTor"`
+		TotalReports         int       `json:"totalReports"`
+		NumDistinctUsers     int       `json:"numDistinctUsers"`
+		// LastReportedAt       time.Time `json:"lastReportedAt"`
+		Reports              []struct {
+			// ReportedAt          time.Time `json:"reportedAt"`
+			Comment             string    `json:"comment"`
+			Categories          []int     `json:"categories"`
+			ReporterID          int       `json:"reporterId"`
+			ReporterCountryCode string    `json:"reporterCountryCode"`
+			ReporterCountryName string    `json:"reporterCountryName"`
+		} `json:"reports"`
+	} `json:"data"`
+}
+
+// TODO Comment
 func parseVTOutput(report string) (VTResult, error) {
 	var vtReport VTResult
 	
@@ -63,6 +90,17 @@ func parseVTOutput(report string) (VTResult, error) {
 	}
 
 	return vtReport, nil
+}
+
+func parseAbuseIpOutput(report string) (AbuseIpResult, error) {
+	var AbuseIpReport AbuseIpResult
+	
+	err := json.Unmarshal([]byte(report), &AbuseIpReport)
+	if err != nil {
+		return AbuseIpResult{}, fmt.Errorf("failed to parse AbuseIPDB report: %w", err)
+	}
+
+	return AbuseIpReport, nil
 }
 
 // Virus Total output format in Terminal
@@ -102,14 +140,14 @@ func formatVTReport(report VTResult) string {
 	return output
 }
 
+
+func formatAbuseIpOutput(report AbuseIpResult) string {
+	// TODO
+}
+
+
+// TODO comment
 func fetchVT(ip string, key string, ch chan EnrichmentResult) {
-	if net.ParseIP(ip) == nil {
-		ch <- EnrichmentResult{
-			Source: "VirusTotal",  
-			Err: fmt.Errorf("invalid IP address: %s", ip),
-		}
-		return
-	}
 	// Send http GET request to retrieve Virus Total IP report 
 	vtUrl := "https://www.virustotal.com/api/v3/ip_addresses/" + ip
 
@@ -160,17 +198,69 @@ func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 }
 
 // TODO comment
+func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
+	abuseIpUrl := "https://api.abuseipdb.com/api/v2/check"
+
+	abuseIpReq, err := http.NewRequest("GET", abuseIpUrl, nil)
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "AbuseIPDB",
+			Err: err,
+		}
+		return
+	}
+
+	q := abuseIpReq.URL.Query()
+	q.Add("ipAddress", ip)
+	q.Add("maxAgeInDays", "90")
+	abuseIpReq.Header.Add("Accept", "application/json")
+	abuseIpReq.Header.Add("Key", os.Getenv("ABUSE_IP_DB_API_KEY"))	
+	abuseIpReq.URL.RawQuery = q.Encode()
+
+	abuseIpRes, err := http.DefaultClient.Do(abuseIpReq)
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "AbuseIPDB",
+			Err: err,
+		}
+		return
+	}
+
+	defer abuseIpRes.Body.Close() 
+	abuseIpBody, err := io.ReadAll(abuseIpRes.Body)	
+	if err != nil {
+		ch <- EnrichmentResult{
+			Source: "AbuseIPDB",
+			Err: err,
+		}
+		return
+	}	
+
+	fmt.Println(parseAbuseIpOutput(string(abuseIpBody)))
+
+	// TODO: Send result to channel
+	
+}
+
+// TODO comment
 func EnrichIP(ip string) {
 	godotenv.Load()
+
+	if net.ParseIP(ip) == nil {
+		fmt.Println("Invalid IP address: %s", ip)
+		return
+	}
+		
 	vtApiKey := os.Getenv("VT_API_KEY")
 
-	ch := make(chan EnrichmentResult, 1)
+	ch := make(chan EnrichmentResult, 2)
 
 	go fetchVT(ip, vtApiKey, ch)
+	go fetchAbuseIpDb(ip, vtApiKey, ch)
 
 	result := <- ch
 	if result.Err != nil {
-		fmt.Println("error from", result.Source, result.Err)
+		fmt.Println("Error from", result.Source, result.Err)
 		return
 	}
 
@@ -178,5 +268,4 @@ func EnrichIP(ip string) {
 	// case condition:
 		
 	// }
-	
 }
