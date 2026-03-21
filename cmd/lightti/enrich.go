@@ -22,7 +22,7 @@ var enrich = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// If IP flag is used
 		if ip != "" {
-			// Call internal function to enrich IP
+			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB
 			enrichmentList := enricher.EnrichIP(ip)
 			for _, result := range enrichmentList {
 				switch r := result.Result.(type) {
