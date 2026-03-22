@@ -120,6 +120,7 @@ func fetchAbuseIpDb(ip string, key string, ch chan EnrichmentResult) {
 	ch <- EnrichmentResult{
 		Source: "AbuseIPDB",
 		Result: abuseIpReport,
+		RawResult: abuseIpBody,
 		Err: nil,
 	}
 }

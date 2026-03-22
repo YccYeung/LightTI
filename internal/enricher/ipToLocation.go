@@ -101,6 +101,7 @@ func fetchIpToLocation(ip string, ch chan EnrichmentResult) {
 	ch <- EnrichmentResult{
 		Source: "IpToLocation",
 		Result: ipToLocationReport,
+		RawResult: ipToLocationBody, 
 		Err: nil,
 	}
 }

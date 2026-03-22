@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 
 	"github.com/spf13/cobra"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -19,10 +21,14 @@ var enrich = &cobra.Command{
 	Short: "Enrich an IP, domain, or file hash against threat intelligence sources",
 	Long:  "Enrich an IP address, domain, or file hash against multiple threat intelligence sources including AbuseIPDB, VirusTotal, and GreyNoise etc.",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Load Api key values from environment variables
+		godotenv.Load()
+		vtApiKey := os.Getenv("VT_API_KEY")
+		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 		// If IP flag is used
 		if ip != "" {
 			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
-			enrichmentList := enricher.EnrichIP(ip)
+			enrichmentList := enricher.EnrichIP(ip, vtApiKey, abuseIpApiKey)
 			for _, result := range enrichmentList {
 				if result.Err != nil {
 					fmt.Printf("Error from %s: %v\n", result.Source, result.Err)

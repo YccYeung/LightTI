@@ -102,6 +102,7 @@ func fetchGreyNoise(ip string, ch chan EnrichmentResult) {
 	ch <- EnrichmentResult{
 		Source: "GreyNoise",
 		Result: GreyNoiseReport,
+		RawResult: GreyNoiseBody,
 		Err: nil,
 	}
 }

@@ -133,6 +133,7 @@ func fetchVT(ip string, key string, ch chan EnrichmentResult) {
 	ch <- EnrichmentResult{
 		Source: "VirusTotal",
 		Result: vtReport,
+		RawResult: vtBody,
 		Err: nil,
 	}
 }

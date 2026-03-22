@@ -2,10 +2,7 @@ package enricher
 
 import (
 	"fmt"
-	"os"
 	"net"
-
-	"github.com/joho/godotenv"
 )
 
 // Formatting String constants used for report output formatting
@@ -20,21 +17,17 @@ type EnrichmentResult struct {
 	Source		string
 	// Content of report
 	Result 		any
+	RawResult	[]byte
 	Err			error
 }
 
 // EnrichIP concurrently queries VirusTotal and AbuseIPDB for the given IP
 // and prints a formatted report for each source to stdout.
-func EnrichIP(ip string) []EnrichmentResult {
-	godotenv.Load()
-
+func EnrichIP(ip string, vtApiKey string, abuseIpApiKey string) []EnrichmentResult {
 	if net.ParseIP(ip) == nil {
 		fmt.Printf("Invalid IP address: %s\n", ip)
 		return []EnrichmentResult{}
 	}
-		
-	vtApiKey := os.Getenv("VT_API_KEY")
-	abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 
 	// Buffer size matches number of goroutines so neither blocks on send
 	chNum := 4
