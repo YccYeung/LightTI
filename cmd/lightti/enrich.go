@@ -17,11 +17,11 @@ var (
 var enrich = &cobra.Command{
 	Use:   "enrich",
 	Short: "Enrich an IP, domain, or file hash against threat intelligence sources",
-	Long:  "Enrich an IP address, domain, or file hash against multiple threat intelligence sources including AbuseIPDB, VirusTotal, and Shodan etc.",
+	Long:  "Enrich an IP address, domain, or file hash against multiple threat intelligence sources including AbuseIPDB, VirusTotal, and GreyNoise etc.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// If IP flag is used
 		if ip != "" {
-			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB
+			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
 			enrichmentList := enricher.EnrichIP(ip)
 			for _, result := range enrichmentList {
 				if result.Err != nil {
@@ -35,6 +35,8 @@ var enrich = &cobra.Command{
 						fmt.Println(enricher.FormatAbuseIpOutput(r))
 					case enricher.IpToLocationResult:
 						fmt.Println(enricher.FormatIpToLocationOutput(r))
+					case enricher.GreyNoiseResult:
+						fmt.Println(enricher.FormatGreyNoiseOutput(r))
 				}
 			}
 		} else if domain != "" {
@@ -42,7 +44,8 @@ var enrich = &cobra.Command{
 		} else if hash != "" {
 			// Call internal function to enrich Hash
 		} else {
-			// print something
+			fmt.Println("\nPlease provide a flag: --ip, --domain, or --hash\n")
+			cmd.Help()
 		}
 	},
 }
