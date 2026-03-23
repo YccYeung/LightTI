@@ -34,7 +34,7 @@ func (p *Postgres) SaveLookup(ctx context.Context, ioc string, iocType string) (
 }
 
 func (p *Postgres) SaveResult(ctx context.Context, lookupID uuid.UUID, source string, result []byte, errMsg string) error {
-	_, err := p.pool.Exec(ctx, "INSERT INTO enrichment_results (lookup_id, source, result, error) VALUES ($1, $2, $3, $4)", lookupID, source, , errMsg)
+	_, err := p.pool.Exec(ctx, "INSERT INTO enrichment_results (lookup_id, source, result, error) VALUES ($1, $2, $3, $4)", lookupID, source, result, errMsg)
 	if err != nil {
 		return err
 	} 

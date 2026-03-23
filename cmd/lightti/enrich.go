@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"os"	
+	"context"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
+	"github.com/YccYeung/LightTI/internal/store"
+	// "github.com/YccYeung/LightTI/internal/score"
 
 	"github.com/spf13/cobra"
 	"github.com/joho/godotenv"
@@ -23,17 +26,42 @@ var enrich = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load Api key values from environment variables
 		godotenv.Load()
+
+		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
 		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
+
+
+		ctx := context.Background()
+		s, err := store.New(ctx, dbURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to connect to database: %v\n", err)
+			return
+		}
+		
 		// If IP flag is used
 		if ip != "" {
 			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
 			enrichmentList := enricher.EnrichIP(ip, vtApiKey, abuseIpApiKey)
+			// totalScore := score.ScoreProcessing(enrichmentList)
+
+			id, err := s.SaveLookup(ctx, ip, "ip")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to save lookup: %v\n", err)
+				return
+			}
+			
 			for _, result := range enrichmentList {
+				errMsg := ""
 				if result.Err != nil {
 					fmt.Printf("Error from %s: %v\n", result.Source, result.Err)
-					continue
+					errMsg = result.Err.Error()
 				}
+
+				if err := s.SaveResult(ctx, id, result.Source, result.RawResult, errMsg); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to save result: %v\n", err)
+				}
+
 				switch r := result.Result.(type) {
 					case enricher.VTResult:
 						fmt.Println(enricher.FormatVTReport(r))

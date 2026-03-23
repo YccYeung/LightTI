@@ -52,7 +52,6 @@ func FormatGreyNoiseOutput(report GreyNoiseResult) string {
 		output += fmt.Sprintf(fmtStr, "Last Seen:", report.LastSeen)
 	}
 	
-
 	return output
 }
 
