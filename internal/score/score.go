@@ -2,111 +2,171 @@ package score
 
 import (
 	"fmt"
-	// "github.com/YccYeung/LightTI/internal/enricher"
+	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
-func placeholder() {
-	fmt.Println("TBD")
+type TotalScore struct {
+	AbuseIPDB	ScoreBreakdown
+	VirusTotal	ScoreBreakdown
+	GreyNoise	ScoreBreakdown
+	Total      	int 
 }
 
+type ScoreBreakdown struct {
+	Details		map[string]ScoreDetail
+	Score       int
+}
 
-// type TotalScore struct {
-// 	AbuseIPDB	ScoreBreakdown
-// 	VirusTotal	ScoreBreakdown
-// 	GreyNoise	ScoreBreakdown
-// }
+type ScoreDetail struct {
+	Points		int
+	Comment		string
+}
 
-// type ScoreBreakdown struct {
-// 	Details		map[string]ScoreDetail
-// 	Score       int
-// }
+func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
+	var s ScoreBreakdown
+	s.Details = make(map[string]ScoreDetail)
 
-// type ScoreDetail struct {
-// 	Points		int
-// 	Comment		string
-// }
-
-// func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
-// 	var summary ScoreBreakdown
-// 	r := result.Result.(enricher.VirusTotal)
-// 	thr
-
-// 	// TODO
-
-// }
-
-// func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
-// 	var d ScoreDetail
-// 	var s ScoreBreakdown
-
-// 	r, ok := result.Result.(enricher.AbuseIpResult)
-// 	if !ok {
-// 		return s
-// 	}
-
-// 	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.4)
-// 	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 40"
-
-// 	s.Details = make(map[string]ScoreDetail)
-// 	s.Score = d.Points
-// 	s.Details["AbuseIPDB Confident Score"] = d
+	r, ok := result.Result.(enricher.VTResult)
+	if !ok {
+		return s
+	}
 	
-// 	return s
-// }
+	a := r.Data.Attributes
+	l := a.LastAnalysisStats
 
-// func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
-// 	var s ScoreBreakdown
-// 	r, ok := result.Result.(enricher.GreyNoiseResult)
-// 	if !ok {
-// 		return s
-// 	}
+	var detailRuputation ScoreDetail
+	var detailMalicious	ScoreDetail
+	var detailSuspicious ScoreDetail
 
-// 	if r.Noise {
-// 		var detailNoise ScoreDetail
-// 		detailNoise.Points += 5
-// 		detailNoise.Comment = "Noise means xyz"
-// 		s.Details["Noise"] = detailNoise
-// 		s.Score += 5
-// 	} 
+	if a.Reputation < 0 {
+		detailRuputation.Points = 5
+		detailRuputation.Comment = fmt.Sprintf("Negative reputation score (%d) in VirusTotal Community", a.Reputation)
+		s.Details["Reputation"]	= detailRuputation
+		s.Score += 5
+	}
 
-// 	if r.Riot && r.LastSeen == "" {
-// 		total += 10
-// 	} else {
-// 		total -= 5
-// 	} 
+	detailMalicious.Points = l.Malicious * 5
+	detailMalicious.Comment = fmt.Sprintf("%d Malicious detections from VirusTotal", l.Malicious)
+	s.Details["Malicious"] = detailMalicious
+	s.Score += detailMalicious.Points
 
-// 	if r.Classification == "Benign" {
-// 		total -= 10
-// 	} else if r.Classification == "Not observed" {
-// 		total += 0
-// 	} else if r.Classification == "Suspicious" {
-// 		total += 5
-// 	} else if r.Classification == "Unknown" {
-// 		total += 10
-// 	} else {
-// 		total += 15
-// 	}
+	detailSuspicious.Points = l.Suspicious * 3
+	detailSuspicious.Comment = fmt.Sprintf("%d Suspicious detections from VirusTotal", l.Suspicious)
+	s.Details["Suspicious"] = detailSuspicious
+	s.Score += detailSuspicious.Points
 
-// 	if total < 0 {
-// 		total = 0
-// 	} else if total > 30 {
-// 		total = 30
-// 	}
+	if s.Score > 30 {
+		s.Score = 30
+	}
 
-// 	return s 
-// }
+	return s
+}
 
-// func ScoreProcessing(result []enricher.EnrichmentResult) TotalScore {
-// 	var total TotalScore
-// 	// need a for loop
-// 	switch result.Source {
-// 	case "VirusTotal":
-// 		total.VirusTotal = scoreVT(result)
-// 	case "AbuseIPDB":
-// 		total.AbuseIPDB = scoreAbuseIPDB(result)
-// 	case "GreyNoise":
-// 		total.GreyNoise = scoreGreyNoise(result)	
-// 	}
+func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
+	var s ScoreBreakdown
+	s.Details = make(map[string]ScoreDetail)
+	
+	r, ok := result.Result.(enricher.AbuseIpResult)
+	if !ok {
+		return s
+	}
 
-//     return total
-// }
+	var d ScoreDetail
+
+	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.4)
+	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 40"
+
+	s.Score = d.Points
+	s.Details["Abuse Confident"] = d
+	
+	return s
+}
+
+func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
+	var s ScoreBreakdown
+	s.Details = make(map[string]ScoreDetail)
+
+	var detailNoise ScoreDetail
+	var detailRiot ScoreDetail
+	var detailClassification ScoreDetail
+
+	r, ok := result.Result.(enricher.GreyNoiseResult)
+	if !ok {
+		return s
+	}
+
+	if r.Noise {
+		detailNoise.Points = 5
+		detailNoise.Comment = "IP is observed in widespread, untargeted internet background traffic (botnets, crawlers, research scanners)"
+		s.Details["Noise"] = detailNoise
+		s.Score += 5
+	} 
+
+	if r.Riot {
+		detailRiot.Points = -5
+		detailRiot.Comment = "IP belongs to a known-benign service (e.g. Google, Cloudflare), likely a false positive"
+		s.Details["Riot"] = detailRiot
+		s.Score -= 5
+	} else if !r.Riot && r.LastSeen != "Not Observed" {
+		detailRiot.Points = 5
+		detailRiot.Comment = "IP DOES NOT belongs to a known-benign service (e.g. Google, Cloudflare)"
+		s.Details["Riot"] = detailRiot
+		s.Score += 5
+	} else {
+		detailRiot.Points = 0
+		detailRiot.Comment = "GreyNoise has no information on this IP"
+		s.Details["Riot"] = detailRiot	
+	}
+
+	if r.Classification == "Benign" {
+		detailClassification.Points = -10
+		detailClassification.Comment = "IP classified as Benign by GreyNoise"
+		s.Details["Classification"] = detailClassification
+		s.Score -= 10
+	} else if r.Classification == "Not observed" {
+		detailClassification.Points = 0
+		detailClassification.Comment = "GreyNoise has no information on this IP"
+		s.Details["Classification"] = detailClassification
+	} else if r.Classification == "Suspicious" {
+		detailClassification.Points = 5
+		detailClassification.Comment = "IP classified as Suspicious by GreyNoise"
+		s.Details["Classification"] = detailClassification
+		s.Score += 5
+	} else if r.Classification == "Unknown" {
+		detailClassification.Points = 10
+		detailClassification.Comment = "IP classified as Unknown by GreyNoise"
+		s.Details["Classification"] = detailClassification
+		s.Score += 10
+	} else if r.Classification == "Malicious" {
+		detailClassification.Points = 15
+		detailClassification.Comment = "IP classified as Malicious by GreyNoise"
+		s.Details["Classification"] = detailClassification
+		s.Score += 15
+	}
+
+	if s.Score < 0 {
+		s.Score = 0
+	} else if s.Score > 30 {
+		s.Score = 30
+	}
+
+	return s 
+}
+
+func ScoreProcessing(result []enricher.EnrichmentResult) TotalScore {
+	var total TotalScore
+	for _, r := range result {
+		switch r.Source {
+		case "VirusTotal":
+			total.VirusTotal = scoreVT(r)
+		case "AbuseIPDB":
+			total.AbuseIPDB = scoreAbuseIPDB(r)
+		case "GreyNoise":
+			total.GreyNoise = scoreGreyNoise(r)	
+		}
+	}
+
+	total.Total = total.AbuseIPDB.Score + total.VirusTotal.Score + total.GreyNoise.Score
+
+    return total
+}
