@@ -55,8 +55,8 @@ func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
 	s.Details["Suspicious"] = detailSuspicious
 	s.Score += detailSuspicious.Points
 
-	if s.Score > 30 {
-		s.Score = 30
+	if s.Score > 40 {
+		s.Score = 40
 	}
 
 	return s
@@ -73,8 +73,8 @@ func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
 
 	var d ScoreDetail
 
-	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.4)
-	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 40"
+	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.3)
+	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 30"
 
 	s.Score = d.Points
 	s.Details["Abuse Confident"] = d
@@ -123,10 +123,6 @@ func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
 		detailClassification.Comment = "IP classified as Benign by GreyNoise"
 		s.Details["Classification"] = detailClassification
 		s.Score -= 10
-	} else if r.Classification == "Not observed" {
-		detailClassification.Points = 0
-		detailClassification.Comment = "GreyNoise has no information on this IP"
-		s.Details["Classification"] = detailClassification
 	} else if r.Classification == "Suspicious" {
 		detailClassification.Points = 5
 		detailClassification.Comment = "IP classified as Suspicious by GreyNoise"
@@ -142,6 +138,10 @@ func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
 		detailClassification.Comment = "IP classified as Malicious by GreyNoise"
 		s.Details["Classification"] = detailClassification
 		s.Score += 15
+	} else {
+		detailClassification.Points = 0
+		detailClassification.Comment = "GreyNoise has no classification on this IP"
+		s.Details["Classification"] = detailClassification
 	}
 
 	if s.Score < 0 {

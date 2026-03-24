@@ -7,7 +7,7 @@ import (
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 	"github.com/YccYeung/LightTI/internal/store"
-	// "github.com/YccYeung/LightTI/internal/score"
+	"github.com/YccYeung/LightTI/internal/score"
 
 	"github.com/spf13/cobra"
 	"github.com/joho/godotenv"
@@ -43,7 +43,9 @@ var enrich = &cobra.Command{
 		if ip != "" {
 			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
 			enrichmentList := enricher.EnrichIP(ip, vtApiKey, abuseIpApiKey)
-			// totalScore := score.ScoreProcessing(enrichmentList)
+
+			totalScore := score.ScoreProcessing(enrichmentList)
+			fmt.Println(score.FormatScore(totalScore))
 
 			id, err := s.SaveLookup(ctx, ip, "ip")
 			if err != nil {
