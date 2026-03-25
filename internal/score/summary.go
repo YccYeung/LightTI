@@ -30,11 +30,11 @@ func FormatScore(ts TotalScore) string {
 	}
 
 	// AbuseIPDB
-	output += fmt.Sprintf("\n  AbuseIPDB:      %d/30\n", ts.AbuseIPDB.Score)
+	output += fmt.Sprintf("\n  AbuseIPDB:      %d/40\n", ts.AbuseIPDB.Score)
 	output += fmt.Sprintf("    + %dpts  %s\n", ts.AbuseIPDB.Details["Abuse Confident"].Points, ts.AbuseIPDB.Details["Abuse Confident"].Comment)
 
 	// GreyNoise
-	output += fmt.Sprintf("\n  GreyNoise:      %d/30\n", ts.GreyNoise.Score)
+	output += fmt.Sprintf("\n  GreyNoise:      %d/20\n", ts.GreyNoise.Score)
 	if ts.GreyNoise.Details["Noise"].Points > 0 {
 		output += fmt.Sprintf("    + %dpts  %s\n", ts.GreyNoise.Details["Noise"].Points, ts.GreyNoise.Details["Noise"].Comment)
 	} else if ts.GreyNoise.Details["Noise"].Points < 0 {

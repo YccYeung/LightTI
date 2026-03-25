@@ -73,8 +73,8 @@ func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
 
 	var d ScoreDetail
 
-	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.3)
-	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 30"
+	d.Points = int(float64(r.Data.AbuseConfidenceScore) * 0.4)
+	d.Comment = "Adjusted scale of AbuseIPDB Confident Score, from 0 - 40"
 
 	s.Score = d.Points
 	s.Details["Abuse Confident"] = d
@@ -146,8 +146,8 @@ func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
 
 	if s.Score < 0 {
 		s.Score = 0
-	} else if s.Score > 30 {
-		s.Score = 30
+	} else if s.Score > 20 {
+		s.Score = 20
 	}
 
 	return s 

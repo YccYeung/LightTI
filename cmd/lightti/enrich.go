@@ -8,6 +8,7 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 	"github.com/YccYeung/LightTI/internal/store"
 	"github.com/YccYeung/LightTI/internal/score"
+	"github.com/YccYeung/LightTI/internal/llm"
 
 	"github.com/spf13/cobra"
 	"github.com/joho/godotenv"
@@ -31,7 +32,6 @@ var enrich = &cobra.Command{
 		vtApiKey := os.Getenv("VT_API_KEY")
 		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 
-
 		ctx := context.Background()
 		s, err := store.New(ctx, dbURL)
 		if err != nil {
@@ -41,11 +41,17 @@ var enrich = &cobra.Command{
 		
 		// If IP flag is used
 		if ip != "" {
+
 			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
 			enrichmentList := enricher.EnrichIP(ip, vtApiKey, abuseIpApiKey)
 
 			totalScore := score.ScoreProcessing(enrichmentList)
 			fmt.Println(score.FormatScore(totalScore))
+
+			model := os.Getenv("OLLAMA_MODEL")
+			llmURL := os.Getenv("OLLAMA_URL")
+
+			llm.LLMAnalysis(ip, enrichmentList, totalScore.Total, model, llmURL)
 
 			id, err := s.SaveLookup(ctx, ip, "ip")
 			if err != nil {
