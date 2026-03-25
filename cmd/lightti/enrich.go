@@ -18,6 +18,7 @@ var (
 	ip 		string
 	domain 	string
 	hash 	string
+	llmUse	bool
 )
 
 var enrich = &cobra.Command{
@@ -31,6 +32,8 @@ var enrich = &cobra.Command{
 		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
 		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
+		model := os.Getenv("OLLAMA_MODEL")
+		llmURL := os.Getenv("OLLAMA_URL")
 
 		ctx := context.Background()
 		s, err := store.New(ctx, dbURL)
@@ -47,11 +50,6 @@ var enrich = &cobra.Command{
 
 			totalScore := score.ScoreProcessing(enrichmentList)
 			fmt.Println(score.FormatScore(totalScore))
-
-			model := os.Getenv("OLLAMA_MODEL")
-			llmURL := os.Getenv("OLLAMA_URL")
-
-			llm.LLMAnalysis(ip, enrichmentList, totalScore.Total, model, llmURL)
 
 			id, err := s.SaveLookup(ctx, ip, "ip")
 			if err != nil {
@@ -81,6 +79,11 @@ var enrich = &cobra.Command{
 						fmt.Println(enricher.FormatGreyNoiseOutput(r))
 				}
 			}
+
+			if llmUse {
+				llm.LLMAnalysis(ip, enrichmentList, totalScore.Total, model, llmURL)
+			}
+
 		} else if domain != "" {
 			// Call internal function to enrich domain	
 		} else if hash != "" {
@@ -96,6 +99,8 @@ func init() {
 	enrich.Flags().StringVar(&ip, "ip", "", "IP address to enrich")
 	enrich.Flags().StringVar(&domain, "domain", "", "Domains to enrich")
 	enrich.Flags().StringVar(&hash, "hash", "", "Hashes to enrich")
+
+	enrich.Flags().BoolVar(&llmUse, "llm", false, "Enable LLM-powered Sigma rule generation")
 
 	rootCmd.AddCommand(enrich)
 }

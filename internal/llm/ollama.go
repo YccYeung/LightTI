@@ -85,6 +85,8 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 	}
 	defer resp.Body.Close()
 
+	fmt.Println("\n=== LLM Sigma Rule Generation ===\n")
+
 	// Read the streaming response line by line
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
