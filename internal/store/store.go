@@ -10,6 +10,8 @@ import (
 type Store interface {
 	SaveLookup(ctx context.Context, ioc string, iocType string) (uuid.UUID, error)
 	SaveResult(ctx context.Context, lookupID uuid.UUID, source string, result []byte, err string) error
+	GetRecentLookup(ctx context.Context, ioc string, iocType string) (uuid.UUID, error)
+	GetRecentResult(ctx context.Context, lookupID uuid.UUID) ([][]byte, error)
 }
 
 type Postgres struct {
@@ -39,4 +41,35 @@ func (p *Postgres) SaveResult(ctx context.Context, lookupID uuid.UUID, source st
 		return err
 	} 
 	return nil
+}
+
+func (p *Postgres) GetRecentLookup(ctx context.Context, ioc string, iocType string) (uuid.UUID, error) {
+	var id uuid.UUID 
+	query := "SELECT id FROM lookups WHERE ioc = $1 AND ioc_type = $2 " + 
+			"AND created_at > now() - INTERVAL '24 hours' " +
+			"ORDER BY created_at DESC " +
+			"LIMIT 1"
+	err := p.pool.QueryRow(ctx, query, ioc, iocType).Scan(&id)
+	if err != nil {
+		return uuid.UUID{}, err
+	} 
+	return id, nil	
+}
+
+func (p *Postgres) GetRecentResult(ctx context.Context, lookupID uuid.UUID) ([][]byte, error) {
+	var allResult [][]byte
+	query := "SELECT result FROM enrichment_results where lookup_id = $1"
+
+	rows, err := p.pool.Query(ctx, query, lookupID)
+	if err != nil {
+		return nil, err
+	}
+	
+	for rows.Next() {
+		var result []byte
+		rows.Scan(&result)
+		allResult = append(allResult, result)
+	}
+	
+	return allResult, nil
 }

@@ -35,6 +35,7 @@ var enrich = &cobra.Command{
 		model := os.Getenv("OLLAMA_MODEL")
 		llmURL := os.Getenv("OLLAMA_URL")
 
+		// Connect with PostgreSQL database
 		ctx := context.Background()
 		s, err := store.New(ctx, dbURL)
 		if err != nil {
