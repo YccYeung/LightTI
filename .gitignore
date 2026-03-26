@@ -3,7 +3,7 @@ CLAUDE.md
 
 bin/
 *.exe
-lightti
+/lightti
 
 .DS_Store
 
