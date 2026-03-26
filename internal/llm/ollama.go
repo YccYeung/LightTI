@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"bufio"
+	"strings"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
@@ -63,7 +64,7 @@ func buildPrompt(ip string, reports []enricher.EnrichmentResult, totalScore int)
     return prompt, nil
 }
 
-func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int, model string, llmURL string) {
+func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int, model string, llmURL string) (string, error) {
 	prompt, _ := buildPrompt(ip, reports, totalScore) 
 
 	payload := map[string]interface{}{
@@ -81,7 +82,7 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 	)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -89,6 +90,7 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 
 	// Read the streaming response line by line
 	scanner := bufio.NewScanner(resp.Body)
+	var output strings.Builder
 	for scanner.Scan() {
 		var result map[string]interface{}
 		json.Unmarshal(scanner.Bytes(), &result)
@@ -96,7 +98,9 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 		// Print each chunk of text as it arrives
 		if text, ok := result["response"].(string); ok {
 			fmt.Print(text)
+			output.WriteString(text)
 		}
 	}
-	fmt.Println()
+
+	return output.String(), nil
 }

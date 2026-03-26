@@ -3,13 +3,14 @@ package api
 import (
 	"fmt"
 	"os"
-	// "net/http"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 	"github.com/YccYeung/LightTI/internal/store"
 	"github.com/YccYeung/LightTI/internal/score"
+	"github.com/YccYeung/LightTI/internal/llm"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 )
 
 type EnrichmentRequest struct {
@@ -64,19 +65,37 @@ func (h *Handler) PostEnrich(c *gin.Context) {
 		}
 	}
 
+	// after scoring, check if LLM requested
+	llmParam := c.Query("llm")
+	fmt.Println("LLM param value:", llmParam) // ← add this
+	fmt.Println("URL query:", c.Request.URL.RawQuery) // ← add this too
+	var llmAnalysis string
+	if llmParam == "true" {
+		llmAnalysis, _ = llm.LLMAnalysis(req.Ioc, enrichmentList, totalScore.Total, h.model, h.llmURL)
+
+	}
+	
 	c.JSON(200, gin.H{
-		"lookup_id": lookupID,
-		"score":     totalScore,
-		"results":   enrichmentList,
+		"lookup_id":    lookupID,
+		"score":        totalScore,
+		"results":      enrichmentList,
+		"llm_analysis": llmAnalysis,
 	})
 }
 
 func (h *Handler) GetHistory(c *gin.Context) {
-	
+	// TODO
 }
 
 func SetupRouter(h *Handler) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+        AllowOrigins: []string{"http://localhost:3000"},
+        AllowMethods: []string{"GET", "POST"},
+        AllowHeaders: []string{"Content-Type"},
+    }))
+
     r.POST("/enrich", h.PostEnrich)
     r.GET("/history", h.GetHistory)
     return r
