@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
-	"github.com/joho/godotenv"
 )
 
 type EnrichmentRequest struct {
@@ -68,13 +67,13 @@ func (h *Handler) PostEnrich(c *gin.Context) {
 
 	// after scoring, check if LLM requested
 	llmParam := c.Query("llm")
-	fmt.Println("LLM param value:", llmParam) // ← add this
-	fmt.Println("URL query:", c.Request.URL.RawQuery) // ← add this too
 	var llmAnalysis string
 	if llmParam == "true" {
-		godotenv.Load("LLM_PROVIDER")
-		provider := llm.NewOllamaClient(h.model, h.llmURL, "")
-		provider.LLMAnalysis(req.Ioc, enrichmentList, totalScore.Total)
+		provider := llm.NewProvider()
+		llmAnalysis, err = provider.LLMAnalysis(req.Ioc, enrichmentList, totalScore.Total)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "LLM analysis failed: %v\n", err)
+		}
 	}
 	
 	c.JSON(200, gin.H{

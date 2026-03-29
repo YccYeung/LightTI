@@ -51,8 +51,6 @@ func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.Enrichment
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("\n=== LLM Sigma Rule Generation ===\n")
-
 	// Read the streaming response line by line
 	scanner := bufio.NewScanner(resp.Body)
 	var output strings.Builder

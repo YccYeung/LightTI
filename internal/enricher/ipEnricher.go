@@ -16,7 +16,7 @@ type EnrichmentResult struct {
 	// Name of report
 	Source		string
 	// Content of report
-	Result 		any
+	Result 		any	
 	RawResult	[]byte
 	Err			error
 }

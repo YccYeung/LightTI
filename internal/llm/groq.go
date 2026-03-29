@@ -100,8 +100,6 @@ func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResu
 
 	defer resp.Body.Close()
 
-	fmt.Println("\n=== LLM Sigma Rule Generation ===\n")
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
