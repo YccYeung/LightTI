@@ -95,7 +95,6 @@ func SetupRouter(h *Handler) *gin.Engine {
         AllowOrigins: []string{
 			"http://localhost:3000",
 			"https://light-ti.vercel.app",
-			"https://light-8ec5qcxua-chi12275a-4709s-projects.vercel.app",
 		},
         AllowMethods: []string{"GET", "POST"},
         AllowHeaders: []string{"Content-Type"},
