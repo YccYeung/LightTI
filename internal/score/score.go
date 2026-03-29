@@ -45,12 +45,12 @@ func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
 		s.Score += 5
 	}
 
-	detailMalicious.Points = l.Malicious * 5
+	detailMalicious.Points = l.Malicious * 7
 	detailMalicious.Comment = fmt.Sprintf("%d Malicious detections from VirusTotal", l.Malicious)
 	s.Details["Malicious"] = detailMalicious
 	s.Score += detailMalicious.Points
 
-	detailSuspicious.Points = l.Suspicious * 3
+	detailSuspicious.Points = l.Suspicious * 5
 	detailSuspicious.Comment = fmt.Sprintf("%d Suspicious detections from VirusTotal", l.Suspicious)
 	s.Details["Suspicious"] = detailSuspicious
 	s.Score += detailSuspicious.Points

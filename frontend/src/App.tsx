@@ -79,7 +79,7 @@ export default function App() {
     setLlmOutput(null)
 
     try {
-      // Phase 1 — enrichment only (fast)
+      // Phase 1 — enrichment only without LLM Analysis
       const res = await fetch("http://localhost:8080/enrich", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,7 +90,7 @@ export default function App() {
       setResults(data)
       setLoading(false)
 
-      // Phase 2 — LLM analysis (slow, runs after results shown)
+      // Phase 2 — enrichment with LLM analysis when option is selected
       if (llmEnabled) {
         setLlmLoading(true)
         const llmRes = await fetch(`http://localhost:8080/enrich?llm=true`, {
@@ -145,7 +145,7 @@ export default function App() {
         {/* Search */}
         <div style={{ maxWidth:"680px", margin:"0 auto 14px" }}>
           <div style={{ display:"flex", border:`1px solid ${error ? "rgba(255,51,85,0.5)" : "#162030"}`, background:"#0b1118", transition:"border-color .2s" }}>
-            <span style={{ fontSize:"12px", color:"#00c8ff", padding:"0 16px", display:"flex", alignItems:"center", borderRight:"1px solid #162030", letterSpacing:"1px", userSelect:"none" }}>IP://</span>
+            <span style={{ fontSize:"12px", color:"#00c8ff", padding:"0 16px", display:"flex", alignItems:"center", borderRight:"1px solid #162030", letterSpacing:"1px", userSelect:"none" }}>IP</span>
             <input
               value={ip}
               onChange={e => { setIp(e.target.value); setError(null) }}

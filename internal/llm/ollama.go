@@ -11,64 +11,29 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
-func buildPrompt(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
-	var summary string
-	
-	for _, r := range reports {
-		switch r.Source {
-		case "VirusTotal":
-			data, err := json.Marshal(r.Result.(enricher.VTResult))
-			if err != nil {
-   	 			continue
-			}
-			summary += fmt.Sprintf("VirusTotal: %s\n", string(data))
-		case "AbuseIPDB":
-			data, err := json.Marshal(r.Result.(enricher.AbuseIpResult))
-			if err != nil {
-   	 			continue
-			}
-			summary += fmt.Sprintf("AbuseIPDB: %s\n", string(data))
-		case "GreyNoise":
-			data, err := json.Marshal(r.Result.(enricher.GreyNoiseResult))
-			if err != nil {
-   	 			continue
-			}
-			summary += fmt.Sprintf("GreyNoise: %s\n", string(data))
-		case "IpToLocation":
-			data, err := json.Marshal(r.Result.(enricher.IpToLocationResult))
-			if err != nil {
-   	 			continue
-			}
-			summary += fmt.Sprintf("IP2Location: %s\n", string(data))
-		}
-	}
-
-    var prompt string
-    if totalScore >= 40 {
-        prompt = fmt.Sprintf(
-            "A senior SOC analyst is reviewing threat intelligence for IP %s. "+
-            "Based on the following data: %s. "+
-            "Generate a Sigma detection rule in YAML for this IP. "+
-            "Output only the YAML Sigma rule. No preamble, no explanation.",
-            ip, summary,
-        )
-    } else {
-        prompt = fmt.Sprintf(
-            "A senior SOC analyst is reviewing threat intelligence for IP %s. "+
-            "Based on the following data: %s. "+
-            "Output only this single sentence: 'No Sigma rule required — IP appears benign.'",
-            ip, summary,
-        )
-    }
-
-    return prompt, nil
+type OllamaClient struct {
+	model		string
+	modelURL	string
+	apiKey		string
 }
 
-func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int, model string, llmURL string) (string, error) {
-	prompt, _ := buildPrompt(ip, reports, totalScore) 
+func NewOllamaClient(llmModel string, url string, key string) *OllamaClient {
+	return &OllamaClient{
+		model: llmModel, 
+		modelURL: url, 
+		apiKey: key,
+	}
+}
+
+func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
+	prompt, err := BuildPrompt(ip, reports, totalScore)
+	if err != nil {
+		fmt.Println("Error in buildPrompt:", err)
+		return "", err	
+	} 
 
 	payload := map[string]interface{}{
-		"model":  model,
+		"model":  ollama.model,
 		"prompt": prompt,
 		"stream": true,
 	}
@@ -76,7 +41,7 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 	payloadBytes, _ := json.Marshal(payload)
 
 	resp, err := http.Post(
-		llmURL,
+		ollama.modelURL,
 		"application/json",
 		bytes.NewBuffer(payloadBytes),
 	)
@@ -97,7 +62,6 @@ func LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int,
 
 		// Print each chunk of text as it arrives
 		if text, ok := result["response"].(string); ok {
-			fmt.Print(text)
 			output.WriteString(text)
 		}
 	}

@@ -32,8 +32,6 @@ var enrich = &cobra.Command{
 		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
 		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
-		model := os.Getenv("OLLAMA_MODEL")
-		llmURL := os.Getenv("OLLAMA_URL")
 
 		// Connect with PostgreSQL database
 		ctx := context.Background()
@@ -82,7 +80,13 @@ var enrich = &cobra.Command{
 			}
 
 			if llmUse {
-				llm.LLMAnalysis(ip, enrichmentList, totalScore.Total, model, llmURL)
+				provider := llm.NewProvider()	
+				result, err := provider.LLMAnalysis(ip, enrichmentList, totalScore.Total)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "LLM analysis failed: %v\n", err)
+					return
+				}
+				fmt.Println(result)
 			}
 
 		} else if domain != "" {
@@ -90,7 +94,7 @@ var enrich = &cobra.Command{
 		} else if hash != "" {
 			// Call internal function to enrich Hash
 		} else {
-			fmt.Println("\nPlease provide a flag: --ip, --domain, or --hash\n")
+			fmt.Println("\nPlease provide a flag: --ip, --domain, or --hash")
 			cmd.Help()
 		}
 	},
