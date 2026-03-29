@@ -80,7 +80,7 @@ export default function App() {
 
     try {
       // Phase 1 — enrichment only without LLM Analysis
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/enrich`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/enrich`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ioc: target, ioc_type: "ip" }),
@@ -93,7 +93,7 @@ export default function App() {
       // Phase 2 — enrichment with LLM analysis when option is selected
       if (llmEnabled) {
         setLlmLoading(true)
-        const llmRes = await fetch(`${import.meta.env.VITE_API_URL}/enrich?llm=true`, {
+        const llmRes = await fetch(`${process.env.REACT_APP_API_URL}/enrich?llm=true`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ioc: target, ioc_type: "ip" }),
