@@ -104,7 +104,7 @@ func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResu
 	if err != nil {
 		return "", err
 	}
-	
+
 	var groqResp GroqResponse
 	if err := json.Unmarshal(body, &groqResp); err != nil {
 		return "", err

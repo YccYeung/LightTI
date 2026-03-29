@@ -92,7 +92,10 @@ func SetupRouter(h *Handler) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
-        AllowOrigins: []string{"http://localhost:3000"},
+        AllowOrigins: []string{
+			"http://localhost:3000",
+			"https://light-ti.vercel.app",	
+		},
         AllowMethods: []string{"GET", "POST"},
         AllowHeaders: []string{"Content-Type"},
     }))

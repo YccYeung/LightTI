@@ -11,9 +11,9 @@ import (
 func NewProvider() LLMProvider {
 	switch os.Getenv("LLM_PROVIDER") {
 		case "groq":
-			return NewGroqClient(os.Getenv("GROQ_LLM_MODEL"), os.Getenv("GROQ_URL"), os.Getenv("GROQ_API_KEY"))
+			return NewGroqClient(os.Getenv("GROQ_MODEL"), os.Getenv("GROQ_URL"), os.Getenv("GROQ_API_KEY"))
 		default:
-			return NewOllamaClient(os.Getenv("OllAMA_LLM_MODEL"), os.Getenv("OLLAMA_URL"), "")
+			return NewOllamaClient(os.Getenv("OLLAMA_MODEL"), os.Getenv("OLLAMA_URL"), "")
     }
 }
 
