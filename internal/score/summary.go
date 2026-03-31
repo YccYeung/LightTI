@@ -9,9 +9,9 @@ func FormatScore(ts TotalScore) string {
 	output += "\n=== Threat Score ===\n\n"
 
 	// Overall threat level
-	if ts.Total < 30 {
+	if ts.Total < 40 {
 		output += fmt.Sprintf("  Total Score:    %d/100 — Low Risk\n", ts.Total)
-	} else if ts.Total < 60 {
+	} else if ts.Total < 80 {
 		output += fmt.Sprintf("  Total Score:    %d/100 — Medium Risk\n", ts.Total)
 	} else {
 		output += fmt.Sprintf("  Total Score:    %d/100 — High Risk\n", ts.Total)
