@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// CLI flag variables bound to the enrich command's flags via init().
 var (
 	ip 		string
 	domain 	string
@@ -21,19 +22,20 @@ var (
 	llmUse	bool
 )
 
+// enrich sub-command: fans out enrichment, scores results, persists to DB, optionally runs LLM.
 var enrich = &cobra.Command{
 	Use:   "enrich",
 	Short: "Enrich an IP, domain, or file hash against threat intelligence sources",
 	Long:  "Enrich an IP address, domain, or file hash against multiple threat intelligence sources including AbuseIPDB, VirusTotal, and GreyNoise etc.",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Load Api key values from environment variables
+		// Load .env file so os.Getenv calls below can read API keys.
 		godotenv.Load()
 
 		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
 		abuseIpApiKey := os.Getenv("ABUSE_IP_DB_API_KEY")
 
-		// Connect with PostgreSQL database
+		// Initialise the database store.
 		ctx := context.Background()
 		s, err := store.New(ctx, dbURL)
 		if err != nil {
@@ -41,15 +43,14 @@ var enrich = &cobra.Command{
 			return
 		}
 		
-		// If IP flag is used
 		if ip != "" {
 
-			// Call internal function to enrich IP, Source: VirusTotal, AbuseIPDB, IP2Location, GreyNoise
+			// Fan out concurrent API calls to VT, AbuseIPDB, IP2Location, GreyNoise.
 			enrichmentList := enricher.EnrichIP(ip, vtApiKey, abuseIpApiKey)
-
+			// Score results deterministically (0-100).
 			totalScore := score.ScoreProcessing(enrichmentList)
 			fmt.Println(score.FormatScore(totalScore))
-
+			// Persist the lookup so results can be linked by ID.
 			id, err := s.SaveLookup(ctx, ip, "ip")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "failed to save lookup: %v\n", err)
@@ -66,7 +67,7 @@ var enrich = &cobra.Command{
 				if err := s.SaveResult(ctx, id, result.Source, result.RawResult, errMsg); err != nil {
 					fmt.Fprintf(os.Stderr, "failed to save result: %v\n", err)
 				}
-
+				// Type assertion before printing output
 				switch r := result.Result.(type) {
 					case enricher.VTResult:
 						fmt.Println(enricher.FormatVTReport(r))
@@ -78,7 +79,7 @@ var enrich = &cobra.Command{
 						fmt.Println(enricher.FormatGreyNoiseOutput(r))
 				}
 			}
-
+			// If llm flag is used
 			if llmUse {
 				provider := llm.NewProvider()	
 				result, err := provider.LLMAnalysis(ip, enrichmentList, totalScore.Total)
