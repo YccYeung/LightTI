@@ -5,6 +5,7 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
+// TotalScore holds the per-source breakdowns and the final aggregated score (0-100).
 type TotalScore struct {
 	AbuseIPDB	ScoreBreakdown
 	VirusTotal	ScoreBreakdown
@@ -12,6 +13,7 @@ type TotalScore struct {
 	Total      	int 
 }
 
+// ScoreBreakdown contains the score contributed by a single source and the reasoning behind each point deduction/addition.
 type ScoreBreakdown struct {
 	Details		map[string]ScoreDetail
 	Score       int
@@ -22,6 +24,8 @@ type ScoreDetail struct {
 	Comment		string
 }
 
+// scoreVT scores a VirusTotal result out of 40.
+// Negative community reputation adds 5 pts; each malicious detection adds 7, each suspicious adds 5.
 func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
 	var s ScoreBreakdown
 	s.Details = make(map[string]ScoreDetail)
@@ -62,6 +66,8 @@ func scoreVT(result enricher.EnrichmentResult) ScoreBreakdown {
 	return s
 }
 
+// scoreAbuseIPDB scores an AbuseIPDB result out of 40.
+// The raw confidence score (0-100) is scaled to 0-40 by multiplying by 0.4.
 func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
 	var s ScoreBreakdown
 	s.Details = make(map[string]ScoreDetail)
@@ -82,6 +88,8 @@ func scoreAbuseIPDB(result enricher.EnrichmentResult) ScoreBreakdown {
 	return s
 }
 
+// scoreGreyNoise scores a GreyNoise result out of 20.
+// RIOT (known-benign service) deducts points; noise and malicious/unknown classification add points.
 func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
 	var s ScoreBreakdown
 	s.Details = make(map[string]ScoreDetail)
@@ -153,6 +161,7 @@ func scoreGreyNoise(result enricher.EnrichmentResult) ScoreBreakdown {
 	return s 
 }
 
+// ScoreProcessing routes each enrichment result to its source scorer and sums the totals.
 func ScoreProcessing(result []enricher.EnrichmentResult) TotalScore {
 	var total TotalScore
 	for _, r := range result {

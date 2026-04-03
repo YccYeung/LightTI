@@ -7,6 +7,7 @@ import (
 	"io"
 )
 
+// IpToLocationResult holds the fields returned by the ip2location API relevant for threat analysis.
 type IpToLocationResult struct {
 	IP          string  `json:"ip"`
 	CountryCode string  `json:"country_code"`
@@ -22,6 +23,7 @@ type IpToLocationResult struct {
 	IsProxy     bool    `json:"is_proxy"`
 }
 
+// parseIpToLocationOutput unmarshals the ip2location API response body into an IpToLocationResult.
 func parseIpToLocationOutput(report string) (IpToLocationResult, error) {
 	var IpToLocationReport IpToLocationResult
 	
@@ -33,6 +35,7 @@ func parseIpToLocationOutput(report string) (IpToLocationResult, error) {
 	return IpToLocationReport, nil
 }
 
+// FormatIpToLocationOutput renders an IpToLocationResult as a human-readable CLI report.
 func FormatIpToLocationOutput(report IpToLocationResult) string {
 	output := "\n=== Ip2Location Report ===\n\n"
 

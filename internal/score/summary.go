@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+// FormatScore renders a TotalScore into a human-readable CLI summary,
+// showing the overall risk level and a per-source point breakdown.
 func FormatScore(ts TotalScore) string {
 	output := "\n=== Unified Threat Summary ===\n"
 	output += "\n=== Threat Score ===\n\n"

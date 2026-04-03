@@ -26,6 +26,7 @@ type Handler struct {
 	llmURL		string
 }
 
+// NewHandler injects all dependencies into the Handler so routes share a single store and API key set.
 func NewHandler(store store.Store, vtApiKey string, abuseKey string, model string, llmURL string) *Handler {
 	return &Handler{
 		store: store,
@@ -36,6 +37,8 @@ func NewHandler(store store.Store, vtApiKey string, abuseKey string, model strin
 	}
 }
 
+// PostEnrich handles POST /enrich: fans out enrichment, scores, persists, and optionally runs LLM analysis.
+// Pass ?llm=true as a query param to trigger Sigma rule generation.
 func (h *Handler) PostEnrich(c *gin.Context) {
 	var req	EnrichmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,7 +68,6 @@ func (h *Handler) PostEnrich(c *gin.Context) {
 		}
 	}
 
-	// after scoring, check if LLM requested
 	llmParam := c.Query("llm")
 	var llmAnalysis string
 	if llmParam == "true" {
@@ -88,6 +90,7 @@ func (h *Handler) GetHistory(c *gin.Context) {
 	// TODO
 }
 
+// SetupRouter registers all routes and applies CORS middleware, allowing the React frontend and local dev to call the API.
 func SetupRouter(h *Handler) *gin.Engine {
 	r := gin.Default()
 

@@ -11,12 +11,14 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
+// OllamaClient implements LLMProvider using a locally running Ollama instance.
 type OllamaClient struct {
 	model		string
 	modelURL	string
 	apiKey		string
 }
 
+// NewOllamaClient constructs an OllamaClient with the given model and endpoint URL.
 func NewOllamaClient(llmModel string, url string, key string) *OllamaClient {
 	return &OllamaClient{
 		model: llmModel, 
@@ -25,6 +27,8 @@ func NewOllamaClient(llmModel string, url string, key string) *OllamaClient {
 	}
 }
 
+// LLMAnalysis builds a prompt, streams the Ollama response line by line, and returns the assembled output.
+// Ollama's generate API emits one JSON object per line with a "response" field rather than a single payload.
 func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
 	prompt, err := BuildPrompt(ip, reports, totalScore)
 	if err != nil {
@@ -51,14 +55,12 @@ func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.Enrichment
 	}
 	defer resp.Body.Close()
 
-	// Read the streaming response line by line
 	scanner := bufio.NewScanner(resp.Body)
 	var output strings.Builder
 	for scanner.Scan() {
 		var result map[string]interface{}
 		json.Unmarshal(scanner.Bytes(), &result)
 
-		// Print each chunk of text as it arrives
 		if text, ok := result["response"].(string); ok {
 			output.WriteString(text)
 		}

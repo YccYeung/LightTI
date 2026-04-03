@@ -7,6 +7,7 @@ import (
 	"io"
 )
 	
+// GreyNoiseResult holds the fields returned by the GreyNoise community API relevant for threat analysis.
 type GreyNoiseResult struct {
 	IP             string `json:"ip"`
 	Noise          bool   `json:"noise"`
@@ -18,6 +19,7 @@ type GreyNoiseResult struct {
 	Message        string `json:"message"`
 }
 
+// parseGreyNoiseOutput unmarshals the GreyNoise API response body into a GreyNoiseResult.
 func parseGreyNoiseOutput(report string) (GreyNoiseResult, error) {
 	var GreyNoiseReport GreyNoiseResult
 	
@@ -29,6 +31,7 @@ func parseGreyNoiseOutput(report string) (GreyNoiseResult, error) {
 	return GreyNoiseReport, nil
 }
 
+// FormatGreyNoiseOutput renders a GreyNoiseResult as a human-readable CLI report.
 func FormatGreyNoiseOutput(report GreyNoiseResult) string {
 	output := "\n=== GreyNoise Report ===\n\n"
 

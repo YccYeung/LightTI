@@ -10,6 +10,7 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
+// GroqResponse mirrors the Groq chat completion API response envelope.
 type GroqResponse struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
@@ -39,12 +40,14 @@ type GroqResponse struct {
 	} `json:"x_groq"`
 }
 
+// GroqClient implements the LLMProvider interface using the Groq inference API.
 type GroqClient struct {
 	model		string
 	modelURL	string
 	apiKey		string
 }
 
+// NewGroqClient constructs a GroqClient with the given model, endpoint URL, and API key.
 func NewGroqClient(llmModel string, url string, key string) *GroqClient {
 	return &GroqClient{
 		model: llmModel,
@@ -53,6 +56,8 @@ func NewGroqClient(llmModel string, url string, key string) *GroqClient {
 	}
 }
 
+// LLMAnalysis builds a SOC analyst prompt from the enrichment results, submits it to Groq,
+// and returns the raw content string (analyst actions + Sigma rule).
 func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
 	prompt, err := BuildPrompt(ip, reports, totalScore)
 	if err != nil {
@@ -60,6 +65,7 @@ func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResu
 		return "", err	
 	} 
 
+	// Groq expects an OpenAI-compatible chat messages array with a system persona and the analyst prompt.
 	payload := map[string]interface{}{
 		"model": groq.model,
 		"messages": []map[string]interface{} { 

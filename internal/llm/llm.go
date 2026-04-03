@@ -8,6 +8,8 @@ import (
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
 
+// NewProvider reads LLM_PROVIDER from the environment and returns the matching client.
+// Defaults to Ollama if the variable is unset.
 func NewProvider() LLMProvider {
 	switch os.Getenv("LLM_PROVIDER") {
 		case "groq":
@@ -17,10 +19,13 @@ func NewProvider() LLMProvider {
     }
 }
 
+// LLMProvider abstracts the LLM backend so Groq and Ollama are interchangeable.
 type LLMProvider interface {
 	LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error)
 }
 
+// BuildPrompt serialises enrichment results into a prompt string.
+// Score >= 40 requests a Sigma YAML rule; below that the model is told no rule is needed.
 func BuildPrompt(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
 	var summary string
 
