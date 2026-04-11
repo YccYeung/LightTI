@@ -1,0 +1,38 @@
+name: Deploy LigthTI
+
+on: 
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Authenicate with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Config Docker for GCP Artficat Registry
+        run: gcloud auth configure-docker europe-west2-docker.pkg.dev
+      
+      - name: Build Docker image
+        run: docker build --platform linux/amd64 -t europe-west2-docker.pkg.dev/lightti-prod/lightti/lightti:latest .
+      
+      - name: Push to Artfiact Registry
+        run: docker push europe-west2-docker.pkg.dev/lightti-prod/lightti/lightti:latest
+      
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy lightti \
+            --image europe-west2-docker.pkg.dev/lightti-prod/lightti/lightti:latest \
+            --platform managed \
+            --region europe-west2 \
+            --allow-unauthenticated \
+            --port 8080

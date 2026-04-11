@@ -87,7 +87,7 @@ var enrich = &cobra.Command{
 					fmt.Fprintf(os.Stderr, "LLM analysis failed: %v\n", err)
 					return
 				}
-				fmt.Println("\n=== LLM Sigma Rule Generation ===\n")
+				fmt.Println("\n=== LLM Sigma Rule Generation ===")
 				fmt.Println(result)
 			}
 
