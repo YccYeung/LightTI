@@ -4,6 +4,7 @@ import (
 	"os"
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/YccYeung/LightTI/internal/store"
 	"github.com/YccYeung/LightTI/internal/api"
@@ -19,7 +20,7 @@ var server = &cobra.Command{
 	Long:  "Start the LightTI server to handle API requests, connect to the database, and provide various functionalities using the configured environment variables.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load .env file so os.Getenv calls below can read API keys.
-		godotenv.Load()
+		_ = godotenv.Load()
 
 		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
@@ -38,7 +39,9 @@ var server = &cobra.Command{
 		h := api.NewHandler(s, vtApiKey, abuseIpApiKey, model, llmURL)
 		// Register routes and start listening on port 8080.
 		r := api.SetupRouter(h)
-		r.Run(":8080")
+		if err := r.Run(":8080"); err != nil {
+			log.Fatal(err)
+		}
 	},	
 }
 

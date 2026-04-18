@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"strings"
+	"fmt"
 )
 
 var scriptingRuntimes = map[string]bool{
@@ -216,9 +217,12 @@ func LookupBinary(executable string, os string) (*LOLBasResult, *GTFOBinsResult)
 }
 
 func init() {
-	json.Unmarshal(localLolbasData, &lolbasDB);
-	json.Unmarshal(localGtfobinData, &gtfobinsDB);
-
+    if err := json.Unmarshal(localLolbasData, &lolbasDB); err != nil {
+        panic(fmt.Sprintf("failed to load LOLBas data: %v", err))
+    }
+    if err := json.Unmarshal(localGtfobinData, &gtfobinsDB); err != nil {
+        panic(fmt.Sprintf("failed to load GTFOBins data: %v", err))
+    }
 	lolbasMap = make(map[string]LOLBasEntry)
 	for _, entry := range lolbasDB {
 		lolbasMap[strings.ToLower(entry.Name)] = entry

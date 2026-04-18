@@ -29,7 +29,7 @@ var enrich = &cobra.Command{
 	Long:  "Enrich an IP address, domain, or file hash against multiple threat intelligence sources including AbuseIPDB, VirusTotal, and GreyNoise etc.",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load .env file so os.Getenv calls below can read API keys.
-		godotenv.Load()
+		_ = godotenv.Load()
 
 		dbURL := os.Getenv("DATABASE_URL")
 		vtApiKey := os.Getenv("VT_API_KEY")
@@ -97,7 +97,9 @@ var enrich = &cobra.Command{
 			// Call internal function to enrich Hash
 		} else {
 			fmt.Println("\nPlease provide a flag: --ip, --domain, or --hash")
-			cmd.Help()
+			if err := cmd.Help(); err != nil {
+				fmt.Fprintf(os.Stderr, "failed to print help: %v\n", err)
+			}
 		}
 	},
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"bufio"
 	"strings"
+	"os"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
 )
@@ -59,7 +60,10 @@ func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.Enrichment
 	var output strings.Builder
 	for scanner.Scan() {
 		var result map[string]interface{}
-		json.Unmarshal(scanner.Bytes(), &result)
+		if err := json.Unmarshal(scanner.Bytes(), &result); err != nil{
+			fmt.Fprintf(os.Stderr, "failed to unmarshal json %v\n", err)
+			continue
+		}
 
 		if text, ok := result["response"].(string); ok {
 			output.WriteString(text)

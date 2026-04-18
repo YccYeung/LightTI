@@ -1,7 +1,9 @@
 package store
 
 import (
+	"fmt"
 	"context"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -73,7 +75,10 @@ func (p *Postgres) GetRecentResult(ctx context.Context, lookupID uuid.UUID) ([][
 	
 	for rows.Next() {
 		var result []byte
-		rows.Scan(&result)
+		if err := rows.Scan(&result); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to scan row: %v\n", err)
+    		continue
+		}
 		allResult = append(allResult, result)
 	}
 	
