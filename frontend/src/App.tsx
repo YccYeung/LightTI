@@ -289,7 +289,9 @@ export default function App() {
                     <div style={{ fontSize:"9px", color:"#3a5570", letterSpacing:"2px", marginBottom:"8px" }}>SCORE FACTORS</div>
                     {Object.entries(results.score.GreyNoise.Details||{}).map(([k,d]) => (
                       <div key={k} style={{ display:"flex", gap:"8px", fontSize:"10px", padding:"2px 0", color:"#3a5570" }}>
-                        <span style={{ color:"#00c8ff", whiteSpace:"nowrap" }}>+{d.Points}pts</span>
+                        <span style={{ color:"#00c8ff", whiteSpace:"nowrap" }}>
+                          {d.Points >= 0 ? `+${d.Points}` : `${d.Points}`}pts
+                        </span>
                         <span>{d.Comment}</span>
                       </div>
                     ))}

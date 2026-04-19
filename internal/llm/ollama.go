@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
+	"github.com/YccYeung/LightTI/internal/command"
 )
 
 // OllamaClient implements LLMProvider using a locally running Ollama instance.
@@ -72,3 +73,48 @@ func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.Enrichment
 
 	return output.String(), nil
 }
+
+func (ollama *OllamaClient) CommandLLMAnalysis(result command.CommandResult) (string, error) {
+	prompt, err := BuildCommandAnalysisPrompt(result)
+	if err != nil {
+		fmt.Println("Error in buildPrompt:", err)
+		return "", err		
+	}
+
+	payload := map[string]interface{}{
+		"model":  ollama.model,
+		"prompt": prompt,
+		"stream": true,	
+	}
+
+	payloadBytes, _ := json.Marshal(payload)
+
+	resp, err := http.Post(
+		ollama.modelURL,
+		"application/json",
+		bytes.NewBuffer(payloadBytes),
+	)
+
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	var output strings.Builder
+	for scanner.Scan() {
+		var response map[string]interface{}
+		if err := json.Unmarshal(scanner.Bytes(), &response); err != nil{
+			fmt.Fprintf(os.Stderr, "failed to unmarshal json %v\n", err)
+			continue
+		}
+
+		if text, ok := response["response"].(string); ok {
+			output.WriteString(text)
+		}
+	}
+
+	return output.String(), nil
+}	

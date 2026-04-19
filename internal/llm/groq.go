@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/YccYeung/LightTI/internal/enricher"
+	"github.com/YccYeung/LightTI/internal/command"
 )
 
 // GroqResponse mirrors the Groq chat completion API response envelope.
@@ -56,22 +57,13 @@ func NewGroqClient(llmModel string, url string, key string) *GroqClient {
 	}
 }
 
-// LLMAnalysis builds a SOC analyst prompt from the enrichment results, submits it to Groq,
-// and returns the raw content string (analyst actions + Sigma rule).
-func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
-	prompt, err := BuildPrompt(ip, reports, totalScore)
-	if err != nil {
-		fmt.Println("Error in buildPrompt:", err)
-		return "", err	
-	} 
-
-	// Groq expects an OpenAI-compatible chat messages array with a system persona and the analyst prompt.
+func (groq *GroqClient) callGroq(systemMessage string, prompt string) (string, error) {
 	payload := map[string]interface{}{
 		"model": groq.model,
 		"messages": []map[string]interface{} { 
 			{
 				"role": "system", 
-				"content": "You are a senior SOC analyst specialising in threat intelligence.",
+				"content": systemMessage,
 			},
 			{
 				"role": "user",
@@ -122,5 +114,25 @@ func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResu
 
 	output := groqResp.Choices[0].Message.Content
 
-	return output, nil
+	return output, nil	
 }
+
+// LLMAnalysis builds a SOC analyst prompt from the enrichment results, submits it to Groq,
+// and returns the raw content string (analyst actions + Sigma rule).
+func (groq *GroqClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
+	prompt, err := BuildPrompt(ip, reports, totalScore)
+	if err != nil {
+		fmt.Println("Error in buildPrompt:", err)
+		return "", err	
+	} 
+	return groq.callGroq("You are a senior SOC analyst specialising in threat intelligence", prompt)
+}
+
+func (groq *GroqClient) CommandLLMAnalysis(result command.CommandResult) (string, error) {
+	prompt, err := BuildCommandAnalysisPrompt(result)
+	if err != nil {
+		fmt.Println("Error in buildPrompt:", err)
+		return "", err	
+	} 
+	return groq.callGroq("You are a senior software engineer with expertise in security and malware analysis", prompt)
+}	
