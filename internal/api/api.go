@@ -4,16 +4,22 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/YccYeung/LightTI/internal/command"
 	"github.com/YccYeung/LightTI/internal/enricher"
-	"github.com/YccYeung/LightTI/internal/store"
-	"github.com/YccYeung/LightTI/internal/score"
 	"github.com/YccYeung/LightTI/internal/llm"
+	"github.com/YccYeung/LightTI/internal/score"
+	"github.com/YccYeung/LightTI/internal/store"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 type EnrichmentRequest struct {
+	Ioc		string 	`json:"ioc"`
+	IocType	string	`json:"ioc_type"`
+}
+
+type AnalyzeRequest struct {
 	Ioc		string 	`json:"ioc"`
 	IocType	string	`json:"ioc_type"`
 }
@@ -86,6 +92,44 @@ func (h *Handler) PostEnrich(c *gin.Context) {
 	})
 }
 
+func (h *Handler) PostAnalyze(c *gin.Context) {
+	var req	AnalyzeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+        return
+	}
+
+	ctx := c.Request.Context()
+	lookupID, err := h.store.SaveLookup(ctx, req.Ioc, req.IocType)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to save lookup"})
+		return
+	}
+
+	var commandResult command.CommandResult
+	processedCommand := command.CommandParser(req.Ioc)
+	lolBasResult, gtfoBinsResult := command.LookupBinary(processedCommand.Executable, processedCommand.OS)
+	
+	commandResult.RawCommand = req.Ioc
+	commandResult.ParsedCommand = *processedCommand
+	commandResult.LOLBasResult = lolBasResult
+	commandResult.GTFOBinsResult = gtfoBinsResult
+
+	// Get llm provider 
+	provider := llm.NewProvider()
+	result, err := provider.CommandLLMAnalysis(commandResult)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "LLM analysis for Command '%s' failed: %v\n", commandResult.RawCommand, err)
+		c.JSON(500, gin.H{"error": "LLM analysis failed"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"lookup_id":  lookupID,
+		"results":    result,
+	})
+}
+
 func (h *Handler) GetHistory(c *gin.Context) {
 	// TODO
 }
@@ -104,6 +148,7 @@ func SetupRouter(h *Handler) *gin.Engine {
     }))
 
     r.POST("/enrich", h.PostEnrich)
+	r.POST("/analyze", h.PostAnalyze)
     r.GET("/history", h.GetHistory)
     return r
 }

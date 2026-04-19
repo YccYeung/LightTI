@@ -2,6 +2,7 @@ package score
 
 import (
 	"fmt"
+	"math"
 )
 
 // FormatScore renders a TotalScore into a human-readable CLI summary,
@@ -42,8 +43,10 @@ func FormatScore(ts TotalScore) string {
 	} else if ts.GreyNoise.Details["Noise"].Points < 0 {
 		output += fmt.Sprintf("    - %dpts  %s\n", ts.GreyNoise.Details["Noise"].Points, ts.GreyNoise.Details["Noise"].Comment)
 	} 
-	if ts.GreyNoise.Details["Riot"].Points != 0 {
+	if ts.GreyNoise.Details["Riot"].Points >= 0 {
 		output += fmt.Sprintf("    + %dpts  %s\n", ts.GreyNoise.Details["Riot"].Points, ts.GreyNoise.Details["Riot"].Comment)
+	} else {
+		output += fmt.Sprintf("    - %dpts  %s\n", int(math.Abs(float64(ts.GreyNoise.Details["Riot"].Points))), ts.GreyNoise.Details["Riot"].Comment)	
 	}
 	if ts.GreyNoise.Details["Classification"].Points != 0 {
 		output += fmt.Sprintf("    + %dpts  %s\n", ts.GreyNoise.Details["Classification"].Points, ts.GreyNoise.Details["Classification"].Comment)
