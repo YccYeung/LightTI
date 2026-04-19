@@ -29,15 +29,7 @@ func NewOllamaClient(llmModel string, url string, key string) *OllamaClient {
 	}
 }
 
-// LLMAnalysis builds a prompt, streams the Ollama response line by line, and returns the assembled output.
-// Ollama's generate API emits one JSON object per line with a "response" field rather than a single payload.
-func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
-	prompt, err := BuildPrompt(ip, reports, totalScore)
-	if err != nil {
-		fmt.Println("Error in buildPrompt:", err)
-		return "", err	
-	} 
-
+func (ollama *OllamaClient) callOllama(prompt string) (string, error) {
 	payload := map[string]interface{}{
 		"model":  ollama.model,
 		"prompt": prompt,
@@ -71,7 +63,18 @@ func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.Enrichment
 		}
 	}
 
-	return output.String(), nil
+	return output.String(), nil	
+}
+
+// LLMAnalysis builds a prompt, streams the Ollama response line by line, and returns the assembled output.
+// Ollama's generate API emits one JSON object per line with a "response" field rather than a single payload.
+func (ollama *OllamaClient) LLMAnalysis(ip string, reports []enricher.EnrichmentResult, totalScore int) (string, error) {
+	prompt, err := BuildPrompt(ip, reports, totalScore)
+	if err != nil {
+		fmt.Println("Error in buildPrompt:", err)
+		return "", err	
+	} 
+	return ollama.callOllama(prompt)
 }
 
 func (ollama *OllamaClient) CommandLLMAnalysis(result command.CommandResult) (string, error) {
@@ -80,41 +83,5 @@ func (ollama *OllamaClient) CommandLLMAnalysis(result command.CommandResult) (st
 		fmt.Println("Error in buildPrompt:", err)
 		return "", err		
 	}
-
-	payload := map[string]interface{}{
-		"model":  ollama.model,
-		"prompt": prompt,
-		"stream": true,	
-	}
-
-	payloadBytes, _ := json.Marshal(payload)
-
-	resp, err := http.Post(
-		ollama.modelURL,
-		"application/json",
-		bytes.NewBuffer(payloadBytes),
-	)
-
-	if err != nil {
-		fmt.Println("Error:", err)
-		return "", err
-	}
-
-	defer resp.Body.Close()
-
-	scanner := bufio.NewScanner(resp.Body)
-	var output strings.Builder
-	for scanner.Scan() {
-		var response map[string]interface{}
-		if err := json.Unmarshal(scanner.Bytes(), &response); err != nil{
-			fmt.Fprintf(os.Stderr, "failed to unmarshal json %v\n", err)
-			continue
-		}
-
-		if text, ok := response["response"].(string); ok {
-			output.WriteString(text)
-		}
-	}
-
-	return output.String(), nil
+	return ollama.callOllama(prompt)
 }	

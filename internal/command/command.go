@@ -168,7 +168,7 @@ func CommandParser(command string) *ParsedCommand {
 	// Parse for full path
 	parser.FullPath = firstSeg
 
-	return  parser
+	return parser
 }
 
 func LookupBinary(executable string, os string) (*LOLBasResult, *GTFOBinsResult) {
