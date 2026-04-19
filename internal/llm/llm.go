@@ -87,11 +87,11 @@ func BuildCommandAnalysisPrompt(result command.CommandResult) (string, error) {
         "Analyse the following command and respond in EXACTLY this format with no additional text:\n\n"+
         "1. Risk Level: [Low/Medium/High/Critial] - [one sentence justification]\n"+
         "2. Source: [what application or system this command originates from]\n"+
-        "3. Intent: [explain what each argument does and the overall objective of the command]\n"+
+        "3. Intent: [list EACH argument on a new line with format 'argument → explanation', then add an Overall line summarising the objective]\n"+
         "4. Recommended Actions: [specific analyst actions to take]\n\n"+
         "Command details:\n%s",
         summary,
     )
 
-    return  prompt, nil
+    return prompt, nil
 }

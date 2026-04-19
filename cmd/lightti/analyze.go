@@ -18,8 +18,8 @@ var	(
 
 var analyze = &cobra.Command{
 	Use:   "analyze",
-	Short: "TODO",
-	Long:  "TODO",
+	Short: "Analyze a suspicious command for malicious intent",
+	Long:  "Analyze a suspicious command or process execution using LOLBas, GTFOBins, and LLM-powered analysis to identify malicious intent, explain arguments, and recommend analyst actions",
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = godotenv.Load()
 		var commandResult command.CommandResult
