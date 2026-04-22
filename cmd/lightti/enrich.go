@@ -92,9 +92,11 @@ var enrich = &cobra.Command{
 			}
 
 		} else if domain != "" {
-			// Call internal function to enrich domain	
+			// Call internal function to enrich domain
+			// TODO	
 		} else if hash != "" {
 			// Call internal function to enrich Hash
+			// TODO
 		} else {
 			fmt.Println("\nPlease provide a flag: --ip, --domain, or --hash")
 			if err := cmd.Help(); err != nil {
